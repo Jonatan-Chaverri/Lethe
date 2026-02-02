@@ -59,6 +59,7 @@ mod MerkleTree {
         zero_hashes: Map<u64, felt252>,
         valid_roots: Map<u64, felt252>,
         rotation: u64,
+        vault_address: ContractAddress,
     }
 
     #[event]
@@ -82,9 +83,10 @@ mod MerkleTree {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, admin: ContractAddress) {
+    fn constructor(ref self: ContractState, admin: ContractAddress, vault: ContractAddress) {
         self.accesscontrol.initializer();
         self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.vault_address.write(vault);
         self.init_zero_hashes();
         self.current_root.write(self.zero_hashes.read(DEPTH - 1));
     }
@@ -105,6 +107,7 @@ mod MerkleTree {
         }
 
         fn insert(ref self: ContractState, commitment: felt252) {
+            assert(self.vault_address.read() == get_caller_address(), 'Caller is not vault');
             let mut index = self.next_leaf_index.read();
             assert(index < MAX_LEAVES, 'Index out of bounds');
             self.next_leaf_index.write(index + 1);
