@@ -128,6 +128,12 @@ mod MerkleTree {
                 index = index / 2;
             }
 
+            self.emit(CommitmentInserted {
+                commitment: commitment,
+                leaf_index: index,
+                new_root: hash
+            });
+
             self.current_root.write(hash);
             // rotation is the index of the valid roots to replace next
             let r = self.rotation.read();
