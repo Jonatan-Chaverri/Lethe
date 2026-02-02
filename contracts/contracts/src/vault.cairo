@@ -1,24 +1,34 @@
+use starknet::ContractAddress;
+
 #[starknet::interface]
 pub trait IVault<ContractState> {
-    fn set_merkle_tree(ref self: ContractState, tree: ContractAddress);
     fn get_total_shares(ref self: ContractState) -> u256;
     fn get_share_price(ref self: ContractState) -> u256;
     fn get_unit_price(ref self: ContractState) -> u256;
     fn deposit(ref self: ContractState, amount: u256, commitment: felt252);
-    fn withdraw(ref self: ContractState, proof: Array<felt252>, root: felt252, nullifier_hash: felt252, k_units: u256, w_units: u256, recipient: ContractAddress, new_commitment: felt252);
+    fn withdraw(
+        ref self: ContractState,
+        proof: Array<felt252>,
+        root: felt252,
+        nullifier_hash: felt252,
+        k_units: u256,
+        w_units: u256,
+        recipient: ContractAddress,
+        new_commitment: felt252
+    );
 }
 
-[starknet::contract]
+#[starknet::contract]
 mod Vault {
+    use contracts::nullifier_registry::{INullifierRegistryDispatcher, INullifierRegistryDispatcherTrait};
+    use contracts::merkle_tree::{IMerkleTreeDispatcher, IMerkleTreeDispatcherTrait};
+    use contracts::verifier::{IVerifierDispatcher, IVerifierDispatcherTrait};
+    use openzeppelin::interfaces::upgrades::IUpgradeable;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
+    use openzeppelin::interfaces::token::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::upgrades::UpgradeableComponent;
-    use openzeppelin::interfaces::upgrades::IUpgradeable;
-    use starknet::event::EventEmitter;
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess, StoragePathEntry, Vec, MutableVecTrait, VecTrait
-    };
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
     use starknet::{ClassHash, ContractAddress, get_caller_address, get_contract_address};
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -39,7 +49,7 @@ mod Vault {
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
 
-    const UNIT_ATOMS: u256 = 10**13;
+    const UNIT_ATOMS: u256 = 10000000000000;
 
     #[storage]
     struct Storage {
@@ -52,6 +62,7 @@ mod Vault {
         total_shares: u256,
         tree_address: ContractAddress,
         nullifier_registry_address: ContractAddress,
+        verifier_address: ContractAddress,
         wbtc_contract: IERC20Dispatcher,
     }
 
@@ -63,16 +74,7 @@ mod Vault {
         #[flat]
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
-        UpgradeableEvent: UpgradeableComponent::Event,
-        CommitmentInserted: CommitmentInserted,
-    }
-
-    // Emitted when a product is listed to the Marketplace
-    #[derive(Drop, PartialEq, starknet::Event)]
-    struct CommitmentInserted {
-        commitment: felt252,
-        leaf_index: u64,
-        new_root: felt252
+        UpgradeableEvent: UpgradeableComponent::Event
     }
 
     #[constructor]
@@ -80,22 +82,21 @@ mod Vault {
         ref self: ContractState,
         admin: ContractAddress,
         nullifier_registry: ContractAddress,
+        merkle_tree: ContractAddress,
+        verifier: ContractAddress,
         wbtc: ContractAddress
     ) {
         self.accesscontrol.initializer();
         self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
         self.nullifier_registry_address.write(nullifier_registry);
-        self.wbtc_address.write(IERC20Dispatcher {contract_address: wbtc});
+        self.tree_address.write(merkle_tree);
+        self.wbtc_contract.write(IERC20Dispatcher {contract_address: wbtc});
+        self.verifier_address.write(verifier);
         self.total_shares.write(0);
     }
 
     #[abi(embed_v0)]
     impl VaultImpl of super::IVault<ContractState> {
-        fn set_merkle_tree(ref self: ContractState, tree: ContractAddress) {
-            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
-            self.tree_address.write(tree);
-        }
-
         fn get_total_shares(ref self: ContractState) -> u256 {
             self.total_shares.read()
         }
@@ -127,7 +128,7 @@ mod Vault {
             assert(k > 0, 'Must buy at least one share');
 
             self.wbtc_contract.read().transfer_from(
-                get_caller_address(), self.get_contract_address(), amount
+                get_caller_address(), get_contract_address(), amount
             );
 
             total_shares = total_shares + (k * UNIT_ATOMS);
@@ -146,10 +147,19 @@ mod Vault {
             recipient: ContractAddress,
             new_commitment: felt252
         ) {
+            assert(!self.is_nullifier_spent(nullifier_hash), 'Nullifier already spent');
+            assert(self.is_valid_root(root), 'Invalid root');
+            assert(w_units > 0, 'w units less than 0');
+
+            assert(self.verify_proof(proof), 'Proof is invalid');
+
+            self.mark_nullifier_as_spent(nullifier_hash);
+
             let total_shares = self.total_shares.read();
             let total_assets = self.get_total_assets();
 
-            let shares_to_withdraw = w_units * UNIT_ATOMS;
+            let shares_to_withdraw: u256 = w_units * UNIT_ATOMS;
+            assert(shares_to_withdraw <= total_shares, 'Not enough shares to withdraw');
             let payout = (shares_to_withdraw * total_assets) / total_shares;
 
             self.total_shares.write(total_shares - shares_to_withdraw);
@@ -163,8 +173,18 @@ mod Vault {
                 self.insert_commitment(new_commitment);
             }
 
-            assert(shares_to_withdraw > 0, 'Must withdraw at least one share');
+            assert(shares_to_withdraw > 0, 'shares is less than 0');
             
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            // This function can only be called by the owner
+            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
+            // Replace the class hash upgrading the contract
+            self.upgradeable.upgrade(new_class_hash);
         }
     }
 
@@ -182,6 +202,34 @@ mod Vault {
                 contract_address: self.tree_address.read(),
             };
             tree.insert(commitment);
+        }
+
+        fn is_nullifier_spent(ref self: ContractState, nullifier_hash: felt252) -> bool {
+            let nullifier_registry = INullifierRegistryDispatcher {
+                contract_address: self.nullifier_registry_address.read(),
+            };
+            nullifier_registry.is_spent(nullifier_hash)
+        }
+
+        fn mark_nullifier_as_spent(ref self: ContractState, nullifier_hash: felt252) {
+            let nullifier_registry = INullifierRegistryDispatcher {
+                contract_address: self.nullifier_registry_address.read(),
+            };
+            nullifier_registry.mark_as_spent(nullifier_hash);
+        }
+
+        fn is_valid_root(ref self: ContractState, root: felt252) -> bool {
+            let mut tree = IMerkleTreeDispatcher {
+                contract_address: self.tree_address.read(),
+            };
+            tree.is_valid_root(root)
+        }
+
+        fn verify_proof(ref self: ContractState, proof: Array<felt252>) -> bool {
+            let verifier = IVerifierDispatcher {
+                contract_address: self.verifier_address.read(),
+            };
+            verifier.verify(proof)
         }
     }
 

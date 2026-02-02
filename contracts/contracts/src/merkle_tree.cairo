@@ -1,8 +1,9 @@
+use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IMerkleTree<ContractState> {
-    fn get_current_root(ref self: ContractState) -> felt252;
-    fn get_valid_roots(ref self: ContractState) -> Array<felt252>;
+    fn set_vault_address(ref self: ContractState, vault: ContractAddress);
+    fn is_valid_root(ref self: ContractState, root: felt252) -> bool;
     fn insert(ref self: ContractState, commitment: felt252);
 }
 
@@ -16,9 +17,9 @@ mod MerkleTree {
     use starknet::event::EventEmitter;
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess, StoragePathEntry, Vec, MutableVecTrait, VecTrait
+        StoragePointerWriteAccess
     };
-    use starknet::{ClassHash, ContractAddress, get_caller_address, get_contract_address};
+    use starknet::{ClassHash, ContractAddress, get_caller_address};
 
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
@@ -83,27 +84,30 @@ mod MerkleTree {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, admin: ContractAddress, vault: ContractAddress) {
+    fn constructor(ref self: ContractState, admin: ContractAddress) {
         self.accesscontrol.initializer();
         self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
-        self.vault_address.write(vault);
         self.init_zero_hashes();
         self.current_root.write(self.zero_hashes.read(DEPTH - 1));
     }
 
     #[abi(embed_v0)]
     impl MerkleTreeImpl of super::IMerkleTree<ContractState> {
-
-        fn get_current_root(ref self: ContractState) -> felt252 {
-            self.current_root.read()
+        fn set_vault_address(ref self: ContractState, vault: ContractAddress) {
+            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
+            self.vault_address.write(vault);
         }
 
-        fn get_valid_roots(ref self: ContractState) -> Array<felt252> {
-            let mut roots = array![];
-            for i in 0..MAX_ROOTS {
-                roots.append(self.valid_roots.read(i));
+        fn is_valid_root(ref self: ContractState, root: felt252) -> bool {
+            if self.current_root.read() == root {
+                return true;
             }
-            roots
+            for i in 0..MAX_ROOTS {
+                if self.valid_roots.read(i) == root {
+                    return true;
+                }
+            }
+            false
         }
 
         fn insert(ref self: ContractState, commitment: felt252) {
