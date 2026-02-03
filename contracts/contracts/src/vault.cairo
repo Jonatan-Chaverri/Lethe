@@ -3,8 +3,7 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IVault<ContractState> {
     fn get_total_shares(ref self: ContractState) -> u256;
-    fn get_share_price(ref self: ContractState) -> u256;
-    fn get_unit_price(ref self: ContractState) -> u256;
+    fn get_share_unit_price(ref self: ContractState) -> u256;
     fn deposit(ref self: ContractState, amount: u256, commitment: felt252);
     fn withdraw(
         ref self: ContractState,
@@ -48,8 +47,11 @@ mod Vault {
     // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
+    // 0.00001 share or 10^-5 atoms
+    // this is the smallest unit a user can buy or sell
+    const UNIT_ATOMS: u256 = 100000;
 
-    const UNIT_ATOMS: u256 = 10000000000000;
+    const ONE_E18: u256 = 1000000000000000000;
 
     #[storage]
     struct Storage {
@@ -84,7 +86,7 @@ mod Vault {
         nullifier_registry: ContractAddress,
         merkle_tree: ContractAddress,
         verifier: ContractAddress,
-        wbtc: ContractAddress
+        wbtc: ContractAddress,
     ) {
         self.accesscontrol.initializer();
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
@@ -92,6 +94,7 @@ mod Vault {
         self.tree_address.write(merkle_tree);
         self.wbtc_contract.write(IERC20Dispatcher {contract_address: wbtc});
         self.verifier_address.write(verifier);
+
         self.total_shares.write(0);
     }
 
@@ -101,16 +104,13 @@ mod Vault {
             self.total_shares.read()
         }
 
-        fn get_share_price(ref self: ContractState) -> u256 {
+        fn get_share_unit_price(ref self: ContractState) -> u256 {
             let total_shares = self.get_total_shares();
-            let total_assets = self.get_total_assets();
-            total_assets / total_shares
-        }
-
-        fn get_unit_price(ref self: ContractState) -> u256 {
-            let total_shares = self.get_total_shares();
-            let total_assets = self.get_total_assets();
-            (total_assets * UNIT_ATOMS) / total_shares
+            if total_shares == 0 {
+                return 0;
+            }
+            let wbtc_in_contract = self.get_total_assets();
+            (wbtc_in_contract * UNIT_ATOMS) / total_shares
         }
 
         fn deposit(ref self: ContractState, amount: u256, commitment: felt252) {
@@ -125,7 +125,7 @@ mod Vault {
             }
 
             let k = minted_shares / UNIT_ATOMS;
-            assert(k > 0, 'Must buy at least one share');
+            assert(k > 0, 'Share unit not reached');
 
             self.wbtc_contract.read().transfer_from(
                 get_caller_address(), get_contract_address(), amount

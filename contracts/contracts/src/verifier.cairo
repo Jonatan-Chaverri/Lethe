@@ -56,7 +56,7 @@ mod Verifier {
         admin: ContractAddress,
     ) {
         self.accesscontrol.initializer();
-        self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
     }
 
     #[abi(embed_v0)]
