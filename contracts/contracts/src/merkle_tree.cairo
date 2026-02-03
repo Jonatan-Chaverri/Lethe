@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 pub trait IMerkleTree<ContractState> {
     fn set_vault_address(ref self: ContractState, vault: ContractAddress);
     fn is_valid_root(ref self: ContractState, root: felt252) -> bool;
-    fn insert(ref self: ContractState, commitment: felt252);
+    fn insert(ref self: ContractState, commitment: felt252) -> felt252;
 }
 
 
@@ -86,7 +86,7 @@ mod MerkleTree {
     #[constructor]
     fn constructor(ref self: ContractState, admin: ContractAddress) {
         self.accesscontrol.initializer();
-        self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
         self.init_zero_hashes();
         self.current_root.write(self.zero_hashes.read(DEPTH - 1));
     }
@@ -110,7 +110,7 @@ mod MerkleTree {
             false
         }
 
-        fn insert(ref self: ContractState, commitment: felt252) {
+        fn insert(ref self: ContractState, commitment: felt252) -> felt252 {
             assert(self.vault_address.read() == get_caller_address(), 'Caller is not vault');
             let mut index = self.next_leaf_index.read();
             assert(index < MAX_LEAVES, 'Index out of bounds');
@@ -146,6 +146,7 @@ mod MerkleTree {
             let r = self.rotation.read();
             self.valid_roots.write(r % MAX_ROOTS, hash);
             self.rotation.write(r + 1);
+            hash
         }
     }
 

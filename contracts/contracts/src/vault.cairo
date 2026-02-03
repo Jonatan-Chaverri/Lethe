@@ -87,7 +87,7 @@ mod Vault {
         wbtc: ContractAddress
     ) {
         self.accesscontrol.initializer();
-        self.accesscontrol.grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
         self.nullifier_registry_address.write(nullifier_registry);
         self.tree_address.write(merkle_tree);
         self.wbtc_contract.write(IERC20Dispatcher {contract_address: wbtc});
