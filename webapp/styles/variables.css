@@ -1,0 +1,5 @@
+/* Optional design tokens; Tailwind theme covers most. */
+:root {
+  --lethe-bg: #0a0a0a;
+  --lethe-accent: #f7931a;
+}
