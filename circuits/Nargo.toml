@@ -1,0 +1,2 @@
+[workspace]
+members = ["deposit", "withdraw", "test_data_generator"]

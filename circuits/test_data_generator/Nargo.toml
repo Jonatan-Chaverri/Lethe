@@ -1,0 +1,7 @@
+[package]
+name = "test_data_generator"
+type = "bin"
+authors = [""]
+
+[dependencies]
+elgamal = { path = "../../noir-v1-elgamal/noir/lib" }

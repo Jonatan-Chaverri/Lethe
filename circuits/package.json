@@ -1,0 +1,22 @@
+{
+  "name": "lethe-circuits",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Testing scripts for Lethe",
+  "scripts": {
+    "test": "node test-proof-only.mjs",
+    "test:full": "node test-complete-flow.mjs",
+    "test:circuit": "nargo test",
+    "compile:circuit": "nargo compile",
+    "compile:and:test": "nargo compile && node test-proof-only.mjs"
+  },
+  "dependencies": {
+    "@aztec/bb.js": "^2.0.4",
+    "@noir-lang/noir_js": "1.0.0-beta.14",
+    "circomlibjs": "^0.1.7"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

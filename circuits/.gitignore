@@ -1,0 +1,26 @@
+# Noir build artifacts
+target/
+*/target/
+
+# Proofs and witnesses
+proofs/
+*.proof
+*.gz
+
+# Prover/Verifier files (optional - uncomment if you don't want to commit these)
+# Prover.toml
+# Verifier.toml
+
+# Dependency cache
+.nargo/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
