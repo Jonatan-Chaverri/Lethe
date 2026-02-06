@@ -1,147 +1,28 @@
-use elgamal::{add_ciphertexts, CipherText, encrypt, public_key, decrypt, verify_embedding};
-use std::embedded_curve_ops::EmbeddedCurvePoint;
+global DOMAIN_COMMITMENT: Field = 0;
 
-// ==================== CUSTOM TYPES ====================
-
-// Point without is_infinite flag (matches contract expectations)
-struct Point {
-    x: Field,
-    y: Field
+fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
+    let input: [Field; 4] = [DOMAIN_COMMITMENT, secret, nullifier, k_units as Field];
+    dep::std::hash::pedersen_hash(input)
 }
 
-// ==================== DEPOSIT CIRCUIT ====================
-// Allows users to deposit tokens into their confidential balance
-//
-// PUBLIC INPUTS/OUTPUTS BYTE LAYOUT (matching Rust contract):
-// [0..64]:     sender_pubkey (x: 32, y: 32)
-// [64..192]:   old_balance_ct (x1.x: 32, x1.y: 32, x2.x: 32, x2.y: 32)
-// [192..320]:  new_balance_ct (x1.x: 32, x1.y: 32, x2.x: 32, x2.y: 32) - OUTPUT
-// [320..352]:  sender_address (32)
-// [352..384]:  token (32)
-// [384..416]:  revealed_amount (32) - OUTPUT
-// Total: 416 bytes
-
+// Deposit circuit: derive a note commitment from private inputs.
+// This is useful for proving a commitment was constructed correctly.
 fn main(
-    // Private inputs (secrets not revealed in proof)
-    sender_priv_key: Field,
-    r_amount: Field,                // Randomness for encrypting amount
-
-    // Public inputs (visible in proof) - ORDER MATTERS for contract!
-    sender_pubkey: pub Point,
-    old_balance_x1: pub Point,
-    old_balance_x2: pub Point,
-    sender_address: pub Field,
-    token: pub Field,
-    amount: pub Field               // Amount to deposit (plaintext, so contract can transfer)
-) -> pub (Point, Point) {  // Returns new_balance ciphertext (2 Points: x1 and x2)
-    // Reconstruct EmbeddedCurvePoint and CipherText from Point structs
-    let sender_pubkey_ec = EmbeddedCurvePoint {
-        x: sender_pubkey.x,
-        y: sender_pubkey.y,
-        is_infinite: false
-    };
-
-    let old_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: old_balance_x1.x, y: old_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: old_balance_x2.x, y: old_balance_x2.y, is_infinite: false }
-    );
-
-    // Enforce range constraints
-    amount.assert_max_bit_size::<40>();
-
-    // Verify sender's public key matches their private key
-    let computed_sender_pubkey = public_key(sender_priv_key);
-    assert(computed_sender_pubkey == sender_pubkey_ec);
-
-    // Encrypt the deposit amount under user's public key
-    let amount_ct = encrypt(sender_pubkey_ec, amount, r_amount);
-
-    // HOMOMORPHIC ADDITION: new_balance = old_balance + amount
-    // This works entirely with encrypted values!
-    let new_balance_ct = add_ciphertexts(old_balance_ct, amount_ct);
-
-    // Return the new encrypted balance as 2 Points (x1 and x2)
-    let new_balance_x1 = Point { x: new_balance_ct.0.x, y: new_balance_ct.0.y };
-    let new_balance_x2 = Point { x: new_balance_ct.1.x, y: new_balance_ct.1.y };
-
-    (new_balance_x1, new_balance_x2)
-}
-
-// ==================== TESTS ====================
-
-#[test]
-fn test_deposit_basic() {
-    // Setup: User with 500 tokens wants to deposit 300 more
-    let sender_priv_key = 42;
-    let sender_pubkey = public_key(sender_priv_key);
-
-    let current_balance = 500;
-    let amount = 300;
-    let expected_new_balance = 800;
-
-    // Encrypt current balance
-    let r_old = 111;
-    let old_balance_ct = encrypt(sender_pubkey, current_balance, r_old);
-
-    // Randomness for encrypting amount
-    let r_amount = 222;
-
-    // Call circuit - it will compute and return the new balance
-    let (returned_new_balance_x1, returned_new_balance_x2) = main(
-        sender_priv_key,
-        r_amount,
-        Point { x: sender_pubkey.x, y: sender_pubkey.y },
-        Point { x: old_balance_ct.0.x, y: old_balance_ct.0.y },
-        Point { x: old_balance_ct.1.x, y: old_balance_ct.1.y },
-        1, // sender address
-        3, // token address
-        amount
-    );
-
-    // Reconstruct returned balance as CipherText to verify
-    let returned_new_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: returned_new_balance_x1.x, y: returned_new_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: returned_new_balance_x2.x, y: returned_new_balance_x2.y, is_infinite: false }
-    );
-
-    // Verify: returned new balance decrypts correctly
-    let decrypted_new_balance = decrypt(returned_new_balance_ct, sender_priv_key);
-    verify_embedding(decrypted_new_balance, expected_new_balance);
+    secret: Field,
+    nullifier: Field,
+    k_units: u64
+) -> pub Field {
+    hash_commitment(secret, nullifier, k_units)
 }
 
 #[test]
-fn test_deposit_zero_balance() {
-    // Setup: New user with 0 balance deposits 1000
-    let sender_priv_key = 42;
-    let sender_pubkey = public_key(sender_priv_key);
+fn test_commitment_determinism() {
+    let secret = 1234;
+    let nullifier = 5678;
+    let k_units: u64 = 42;
 
-    let current_balance = 0;
-    let amount = 1000;
+    let expected = hash_commitment(secret, nullifier, k_units);
+    let out = main(secret, nullifier, k_units);
 
-    let r_old = 111;
-    let old_balance_ct = encrypt(sender_pubkey, current_balance, r_old);
-
-    let r_amount = 222;
-
-    // Call circuit - it will compute and return the new balance
-    let (returned_new_balance_x1, returned_new_balance_x2) = main(
-        sender_priv_key,
-        r_amount,
-        Point { x: sender_pubkey.x, y: sender_pubkey.y },
-        Point { x: old_balance_ct.0.x, y: old_balance_ct.0.y },
-        Point { x: old_balance_ct.1.x, y: old_balance_ct.1.y },
-        1,
-        3,
-        amount
-    );
-
-    // Reconstruct returned balance as CipherText to verify
-    let returned_new_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: returned_new_balance_x1.x, y: returned_new_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: returned_new_balance_x2.x, y: returned_new_balance_x2.y, is_infinite: false }
-    );
-
-    // Verify: returned new balance decrypts correctly (should be = amount since old balance was 0)
-    let decrypted_new_balance = decrypt(returned_new_balance_ct, sender_priv_key);
-    verify_embedding(decrypted_new_balance, amount);
+    assert(out == expected);
 }

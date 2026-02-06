@@ -1,30 +1,52 @@
-use elgamal::{public_key, encrypt};
-use std::embedded_curve_ops::EmbeddedCurvePoint;
+global DOMAIN_COMMITMENT: Field = 0;
 
-struct Point {
-    x: Field,
-    y: Field
+fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
+    let input: [Field; 4] = [DOMAIN_COMMITMENT, secret, nullifier, k_units as Field];
+    dep::std::hash::pedersen_hash(input)
 }
 
-// This program generates valid test data for JavaScript proof generation
+// Generates note data useful for JS proof generation.
 // Run with: nargo execute
 // Output will be in target/test_data_generator.json (witness values)
 fn main(
-    sender_priv_key: Field,
-    current_balance: Field,
-    r_old: Field,
-    amount: Field
-) -> pub (Point, Point, Point) {
-    // Generate public key from private key
-    let sender_pubkey = public_key(sender_priv_key);
+    secret: Field,
+    nullifier: Field,
+    k_units: u64,
+    w_units: u64,
+    new_secret: Field,
+    new_nullifier: Field
+) -> pub (Field, Field, Field) {
+    let commitment = hash_commitment(secret, nullifier, k_units);
+    let nullifier_hash = dep::std::hash::pedersen_hash([nullifier]);
+    let remaining_units = k_units - w_units;
+    let new_commitment = hash_commitment(new_secret, new_nullifier, remaining_units);
 
-    // Encrypt current balance
-    let old_balance_ct = encrypt(sender_pubkey, current_balance, r_old);
+    (commitment, nullifier_hash, new_commitment)
+}
 
-    // Return public key and old balance ciphertext
-    let pubkey = Point { x: sender_pubkey.x, y: sender_pubkey.y };
-    let old_balance_x1 = Point { x: old_balance_ct.0.x, y: old_balance_ct.0.y };
-    let old_balance_x2 = Point { x: old_balance_ct.1.x, y: old_balance_ct.1.y };
+#[test]
+fn test_generate_data() {
+    let secret = 1111;
+    let nullifier = 2222;
+    let k_units: u64 = 10;
+    let w_units: u64 = 4;
+    let new_secret = 3333;
+    let new_nullifier = 4444;
 
-    (pubkey, old_balance_x1, old_balance_x2)
+    let (commitment, nullifier_hash, new_commitment) = main(
+        secret,
+        nullifier,
+        k_units,
+        w_units,
+        new_secret,
+        new_nullifier
+    );
+
+    let expected_commitment = hash_commitment(secret, nullifier, k_units);
+    let expected_nullifier_hash = dep::std::hash::pedersen_hash([nullifier]);
+    let expected_new_commitment = hash_commitment(new_secret, new_nullifier, k_units - w_units);
+
+    assert(commitment == expected_commitment);
+    assert(nullifier_hash == expected_nullifier_hash);
+    assert(new_commitment == expected_new_commitment);
 }

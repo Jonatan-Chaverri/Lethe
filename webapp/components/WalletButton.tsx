@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WalletType } from "@/hooks/useWallet";
 
 export interface WalletButtonProps {
@@ -11,9 +11,9 @@ export interface WalletButtonProps {
   onDisconnect: () => void;
 }
 
-function truncateAddress(addr: string): string {
-  if (addr.length <= 14) return addr;
-  return `${addr.slice(0, 6)}…${addr.slice(-6)}`;
+function truncateAddress(value: string): string {
+  if (value.length <= 14) return value;
+  return `${value.slice(0, 6)}...${value.slice(-6)}`;
 }
 
 export function WalletButton({
@@ -27,37 +27,58 @@ export function WalletButton({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    if (!open) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
     }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   if (isConnected && address) {
     return (
       <div className="relative" ref={menuRef}>
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 rounded border border-lethe-black-border bg-lethe-black-soft px-3 py-2 font-mono text-sm text-lethe-orange transition hover:border-lethe-orange/50"
+          onClick={() => setOpen((value) => !value)}
+          className="inline-flex items-center gap-2 rounded-full border border-lethe-line bg-lethe-card/90 px-3 py-2 text-sm font-semibold text-lethe-mint transition hover:border-lethe-mint/50"
+          aria-expanded={open}
+          aria-haspopup="menu"
         >
-          <span>{truncateAddress(address)}</span>
-          <span className="text-gray-500 text-xs capitalize">
-            {walletType ?? ""}
+          <span className="font-mono text-xs">{truncateAddress(address)}</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-lethe-muted">
+            {walletType}
           </span>
         </button>
+
         {open && (
-          <div className="absolute right-0 top-full mt-1 w-48 rounded border border-lethe-black-border bg-lethe-black-soft py-1 shadow-lg">
+          <div
+            className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel"
+            role="menu"
+          >
             <button
               type="button"
               onClick={() => {
                 onDisconnect();
                 setOpen(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5"
+              className="w-full px-3 py-2 text-left text-sm text-lethe-rose transition hover:bg-lethe-steel/40"
+              role="menuitem"
             >
               Disconnect
             </button>
@@ -71,20 +92,27 @@ export function WalletButton({
     <div className="relative" ref={menuRef}>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="rounded bg-lethe-orange px-4 py-2 text-sm font-medium text-black transition hover:bg-lethe-orange-glow"
+        onClick={() => setOpen((value) => !value)}
+        className="rounded-full bg-lethe-amber px-4 py-2 text-sm font-semibold text-lethe-ink transition hover:-translate-y-0.5 hover:bg-[#ffc455]"
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         Connect Wallet
       </button>
+
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded border border-lethe-black-border bg-lethe-black-soft py-1 shadow-lg">
+        <div
+          className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel"
+          role="menu"
+        >
           <button
             type="button"
             onClick={() => {
               onConnect("argentx");
               setOpen(false);
             }}
-            className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
+            className="w-full px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/40"
+            role="menuitem"
           >
             Argent X
           </button>
@@ -94,7 +122,8 @@ export function WalletButton({
               onConnect("braavos");
               setOpen(false);
             }}
-            className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/5"
+            className="w-full px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/40"
+            role="menuitem"
           >
             Braavos
           </button>

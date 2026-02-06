@@ -2,8 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-top: #101f34;
+  --bg-bottom: #080c13;
+  --halo-mint: rgba(126, 240, 199, 0.15);
+  --halo-amber: rgba(244, 178, 58, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
 
 body {
-  background-color: #0a0a0a;
-  color: #e5e5e5;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% -5%, var(--halo-mint), transparent 38%),
+    radial-gradient(circle at 86% 12%, var(--halo-amber), transparent 42%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 68%);
+  color: #f3f7ff;
+}
+
+main {
+  position: relative;
+}
+
+main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(168, 181, 206, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 181, 206, 0.08) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

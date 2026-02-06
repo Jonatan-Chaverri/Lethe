@@ -1,7 +1,6 @@
 [package]
 name = "deposit"
 type = "bin"
-authors = ["Gerson"]
+authors = ["Lethe"]
 
 [dependencies]
-elgamal = { path = "../../noir-v1-elgamal/noir/lib" }

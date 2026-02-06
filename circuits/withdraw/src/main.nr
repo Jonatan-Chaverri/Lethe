@@ -1,165 +1,110 @@
-use elgamal::{add_ciphertexts, CipherText, encrypt, public_key, decrypt, verify_embedding};
-use std::embedded_curve_ops::EmbeddedCurvePoint;
+global DOMAIN_COMMITMENT: Field = 0;
+global DOMAIN_LEAF: Field = 1;
+global DOMAIN_NODE: Field = 2;
+global DEPTH: u32 = 20;
 
-// ==================== CUSTOM TYPES ====================
-
-// Point without is_infinite flag (matches contract expectations)
-struct Point {
-    x: Field,
-    y: Field
+fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
+    let input: [Field; 4] = [DOMAIN_COMMITMENT, secret, nullifier, k_units as Field];
+    dep::std::hash::pedersen_hash(input)
 }
 
-// ==================== HELPER FUNCTIONS ====================
+fn hash_leaf(commitment: Field) -> Field {
+    let input: [Field; 2] = [DOMAIN_LEAF, commitment];
+    dep::std::hash::pedersen_hash(input)
+}
 
-// Negate an elliptic curve point by negating its y-coordinate
-fn negate_point(p: EmbeddedCurvePoint) -> EmbeddedCurvePoint {
-    EmbeddedCurvePoint {
-        x: p.x,
-        y: 0 - p.y,
-        is_infinite: p.is_infinite
+fn hash_node(left: Field, right: Field) -> Field {
+    let input: [Field; 3] = [DOMAIN_NODE, left, right];
+    dep::std::hash::pedersen_hash(input)
+}
+
+fn compute_root(leaf: Field, path_elements: [Field; DEPTH], path_indices: [bool; DEPTH]) -> Field {
+    let mut hash = leaf;
+
+    for i in 0..DEPTH {
+        let sibling = path_elements[i];
+        let is_right = path_indices[i];
+        let left = if is_right { sibling } else { hash };
+        let right = if is_right { hash } else { sibling };
+        hash = hash_node(left, right);
     }
+
+    hash
 }
 
-// Homomorphic subtraction: a - b = a + (-b)
-fn subtract_ciphertexts(a: CipherText, b: CipherText) -> CipherText {
-    let negated_b = (negate_point(b.0), negate_point(b.1));
-    add_ciphertexts(a, negated_b)
-}
-
-// ==================== WITHDRAW CIRCUIT ====================
-// Allows users to withdraw tokens from their confidential balance
+// Withdraw circuit for private notes
 //
-// PUBLIC INPUTS/OUTPUTS BYTE LAYOUT (matching Rust contract):
-// [0..64]:     sender_pubkey (x: 32, y: 32)
-// [64..192]:   old_balance_ct (x1.x: 32, x1.y: 32, x2.x: 32, x2.y: 32)
-// [192..320]:  new_balance_ct (x1.x: 32, x1.y: 32, x2.x: 32, x2.y: 32) - OUTPUT
-// [320..352]:  sender_address (32)
-// [352..384]:  token (32)
-// [384..416]:  revealed_amount (32) - OUTPUT
-// Total: 416 bytes
-
+// Public inputs:
+// - root: Merkle root
+// - nullifier_hash: Poseidon(nullifier)
+// - k_units: note size in fixed share units
+// - w_units: amount to withdraw in fixed share units
+// - new_commitment: commitment for the remaining note (k_units - w_units)
 fn main(
-    // Private inputs (secrets not revealed in proof)
-    sender_priv_key: Field,
-    r_amount: Field,                // Randomness for encrypting amount
+    // Private inputs
+    secret: Field,
+    nullifier: Field,
+    path_elements: [Field; DEPTH],
+    path_indices: [bool; DEPTH],
+    new_secret: Field,
+    new_nullifier: Field,
 
-    // Public inputs (visible in proof) - ORDER MATTERS for contract!
-    sender_pubkey: pub Point,
-    old_balance_x1: pub Point,
-    old_balance_x2: pub Point,
-    sender_address: pub Field,
-    token: pub Field,
-    amount: pub Field               // Amount to withdraw (plaintext, so contract can transfer)
-) -> pub (Point, Point) {  // Returns new_balance ciphertext (2 Points: x1 and x2)
-    // Reconstruct EmbeddedCurvePoint and CipherText from Point structs
-    let sender_pubkey_ec = EmbeddedCurvePoint {
-        x: sender_pubkey.x,
-        y: sender_pubkey.y,
-        is_infinite: false
-    };
+    // Public inputs
+    root: pub Field,
+    nullifier_hash: pub Field,
+    k_units: pub u64,
+    w_units: pub u64,
+) -> pub Field {
+    assert(w_units <= k_units);
+    let remaining_units = k_units - w_units;
 
-    let old_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: old_balance_x1.x, y: old_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: old_balance_x2.x, y: old_balance_x2.y, is_infinite: false }
-    );
+    let commitment = hash_commitment(secret, nullifier, k_units);
+    let leaf = hash_leaf(commitment);
+    let computed_root = compute_root(leaf, path_elements, path_indices);
+    assert(computed_root == root);
 
-    // Enforce range constraints
-    amount.assert_max_bit_size::<40>();
+    let computed_nullifier_hash = dep::std::hash::pedersen_hash([nullifier]);
+    assert(computed_nullifier_hash == nullifier_hash);
 
-    // Verify sender's public key matches their private key
-    let computed_sender_pubkey = public_key(sender_priv_key);
-    assert(computed_sender_pubkey == sender_pubkey_ec);
-
-    // Encrypt the withdrawal amount under user's public key
-    let amount_ct = encrypt(sender_pubkey_ec, amount, r_amount);
-
-    // HOMOMORPHIC SUBTRACTION: new_balance = old_balance - amount
-    // This works entirely with encrypted values!
-    let new_balance_ct = subtract_ciphertexts(old_balance_ct, amount_ct);
-
-    // Return the new encrypted balance as 2 Points (x1 and x2)
-    let new_balance_x1 = Point { x: new_balance_ct.0.x, y: new_balance_ct.0.y };
-    let new_balance_x2 = Point { x: new_balance_ct.1.x, y: new_balance_ct.1.y };
-
-    (new_balance_x1, new_balance_x2)
-}
-
-// ==================== TESTS ====================
-
-#[test]
-fn test_withdraw_basic() {
-    // Setup: User with 1000 tokens wants to withdraw 200
-    let sender_priv_key = 42;
-    let sender_pubkey = public_key(sender_priv_key);
-
-    let current_balance = 1000;
-    let amount = 200;
-    let expected_new_balance = 800;
-
-    // Encrypt current balance
-    let r_old = 111;
-    let old_balance_ct = encrypt(sender_pubkey, current_balance, r_old);
-
-    // Randomness for encrypting amount
-    let r_amount = 222;
-
-    // Call circuit - it will compute and return the new balance
-    let (returned_new_balance_x1, returned_new_balance_x2) = main(
-        sender_priv_key,
-        r_amount,
-        Point { x: sender_pubkey.x, y: sender_pubkey.y },
-        Point { x: old_balance_ct.0.x, y: old_balance_ct.0.y },
-        Point { x: old_balance_ct.1.x, y: old_balance_ct.1.y },
-        1, // sender address
-        3, // token address
-        amount
-    );
-
-    // Reconstruct returned balance as CipherText to verify
-    let returned_new_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: returned_new_balance_x1.x, y: returned_new_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: returned_new_balance_x2.x, y: returned_new_balance_x2.y, is_infinite: false }
-    );
-
-    // Verify: returned new balance decrypts correctly
-    let decrypted_new_balance = decrypt(returned_new_balance_ct, sender_priv_key);
-    verify_embedding(decrypted_new_balance, expected_new_balance);
+    let new_commitment = hash_commitment(new_secret, new_nullifier, remaining_units);
+    new_commitment
 }
 
 #[test]
-fn test_withdraw_all_balance() {
-    // Setup: User withdraws entire balance
-    let sender_priv_key = 42;
-    let sender_pubkey = public_key(sender_priv_key);
+fn test_withdraw_merkle_membership() {
+    let secret = 1111;
+    let nullifier = 2222;
+    let k_units: u64 = 10;
+    let w_units: u64 = 4;
+    let new_secret = 3333;
+    let new_nullifier = 4444;
 
-    let current_balance = 500;
-    let amount = 500;
+    let commitment = hash_commitment(secret, nullifier, k_units);
+    let leaf = hash_leaf(commitment);
 
-    let r_old = 111;
-    let old_balance_ct = encrypt(sender_pubkey, current_balance, r_old);
+    let mut path_elements: [Field; DEPTH] = [0; DEPTH];
+    let mut path_indices: [bool; DEPTH] = [false; DEPTH];
+    for i in 0..DEPTH {
+        path_elements[i] = (i as Field) + 123;
+        path_indices[i] = (i % 2) == 1;
+    }
 
-    let r_amount = 222;
+    let root = compute_root(leaf, path_elements, path_indices);
+    let nullifier_hash = dep::std::hash::pedersen_hash([nullifier]);
 
-    // Call circuit - it will compute and return the new balance
-    let (returned_new_balance_x1, returned_new_balance_x2) = main(
-        sender_priv_key,
-        r_amount,
-        Point { x: sender_pubkey.x, y: sender_pubkey.y },
-        Point { x: old_balance_ct.0.x, y: old_balance_ct.0.y },
-        Point { x: old_balance_ct.1.x, y: old_balance_ct.1.y },
-        1,
-        3,
-        amount
+    let out = main(
+        secret,
+        nullifier,
+        path_elements,
+        path_indices,
+        new_secret,
+        new_nullifier,
+        root,
+        nullifier_hash,
+        k_units,
+        w_units
     );
 
-    // Reconstruct returned balance as CipherText to verify
-    let returned_new_balance_ct: CipherText = (
-        EmbeddedCurvePoint { x: returned_new_balance_x1.x, y: returned_new_balance_x1.y, is_infinite: false },
-        EmbeddedCurvePoint { x: returned_new_balance_x2.x, y: returned_new_balance_x2.y, is_infinite: false }
-    );
-
-    // Verify: returned new balance decrypts to 0 (withdrew everything)
-    let decrypted_new_balance = decrypt(returned_new_balance_ct, sender_priv_key);
-    verify_embedding(decrypted_new_balance, 0);
+    let expected = hash_commitment(new_secret, new_nullifier, k_units - w_units);
+    assert(out == expected);
 }
-

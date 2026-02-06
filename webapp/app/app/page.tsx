@@ -1,11 +1,17 @@
 "use client";
 
-import { useWallet } from "@/hooks/useWallet";
-import { useMockContracts } from "@/hooks/useMockContracts";
-import { useAuth } from "@/hooks/useAuth";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import Link from "next/link";
+import { Footer } from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import { useAuth } from "@/hooks/useAuth";
+import { useMockContracts } from "@/hooks/useMockContracts";
+import { useWallet } from "@/hooks/useWallet";
+
+interface SummaryItem {
+  label: string;
+  value: string;
+  tone: string;
+}
 
 export default function AppDashboardPage() {
   const wallet = useWallet();
@@ -15,102 +21,100 @@ export default function AppDashboardPage() {
   const balance = contracts.getUserBalance();
   const yieldAccrued = contracts.getUserYield();
 
+  const summaryItems: SummaryItem[] = [
+    {
+      label: "Balance (wBTC)",
+      value: `${balance.toFixed(8)} BTC`,
+      tone: "text-lethe-mint",
+    },
+    {
+      label: "Yield accrued",
+      value: `${yieldAccrued.toFixed(8)} BTC`,
+      tone: "text-lethe-amber",
+    },
+  ];
+
   return (
     <>
       <Navbar wallet={wallet} />
-      <main className="min-h-screen px-4 pt-24 pb-16">
-        <div className="mx-auto max-w-2xl">
-          <h1 className="font-cinzel text-2xl font-semibold text-white">
-            Dashboard
-          </h1>
+      <main className="min-h-screen px-4 pb-16 pt-24">
+        <div className="mx-auto max-w-3xl">
+          <header>
+            <h1 className="font-display text-5xl text-lethe-text">Dashboard</h1>
+            <p className="mt-2 text-sm text-lethe-muted">
+              Mocked environment for wallet and vault interactions.
+            </p>
+          </header>
 
-          {/* Wallet status */}
-          <section className="mt-8 rounded-lg border border-lethe-black-border bg-lethe-black-soft p-6">
-            <h2 className="font-mono text-sm font-medium text-gray-500 uppercase tracking-wider">
+          <section className="mt-8 rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-lethe-muted">
               Wallet
             </h2>
-            <p className="mt-2 text-gray-400">
+            <p className="mt-3 text-lethe-text">
               {wallet.isConnected
-                ? `Connected (${wallet.walletType ?? "—"})`
+                ? `Connected (${wallet.walletType ?? "unknown"})`
                 : "Not connected"}
             </p>
             {wallet.address && (
-              <p className="mt-1 font-mono text-sm text-lethe-orange">
+              <p className="mt-1 break-all font-mono text-sm text-lethe-mint">
                 {wallet.address}
               </p>
             )}
             {!auth.isAuthenticated && (
-              <p className="mt-2 text-sm text-amber-500/90">
+              <p className="mt-3 text-sm text-lethe-rose">
                 Connect a wallet to see your position and yield.
               </p>
             )}
           </section>
 
-          {/* Mock balance & yield */}
-          <section className="mt-6 rounded-lg border border-lethe-black-border bg-lethe-black-soft p-6">
-            <h2 className="font-mono text-sm font-medium text-gray-500 uppercase tracking-wider">
+          <section className="mt-5 rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-lethe-muted">
               Your position (mocked)
             </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-gray-500">Balance (wBTC)</p>
-                <p className="font-mono text-xl text-lethe-orange">
-                  {balance.toFixed(8)} BTC
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Yield accrued</p>
-                <p className="font-mono text-xl text-lethe-yellow">
-                  {yieldAccrued.toFixed(8)} BTC
-                </p>
-              </div>
+              {summaryItems.map((item) => (
+                <article key={item.label} className="rounded-xl border border-lethe-line bg-lethe-steel/25 p-4">
+                  <p className="text-sm text-lethe-muted">{item.label}</p>
+                  <p className={`mt-2 font-mono text-xl ${item.tone}`}>{item.value}</p>
+                </article>
+              ))}
             </div>
           </section>
 
-          {/* Mock actions */}
-          <section className="mt-6 rounded-lg border border-lethe-black-border bg-lethe-black-soft p-6">
-            <h2 className="font-mono text-sm font-medium text-gray-500 uppercase tracking-wider">
+          <section className="mt-5 rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-lethe-muted">
               Actions
             </h2>
-            <p className="mt-2 text-sm text-gray-500">
-              Buttons are disabled; contract calls are mocked.
+            <p className="mt-2 text-sm text-lethe-muted">
+              Contract calls are mocked in this version.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                disabled
-                className="rounded border border-lethe-black-border bg-lethe-black px-4 py-2 text-sm text-gray-500 cursor-not-allowed"
-              >
-                Deposit
-              </button>
-              <button
-                type="button"
-                disabled
-                className="rounded border border-lethe-black-border bg-lethe-black px-4 py-2 text-sm text-gray-500 cursor-not-allowed"
-              >
-                Withdraw
-              </button>
-              <button
-                type="button"
-                disabled
-                className="rounded border border-lethe-black-border bg-lethe-black px-4 py-2 text-sm text-gray-500 cursor-not-allowed"
-              >
-                Claim yield
-              </button>
+              <ActionButton label="Deposit" />
+              <ActionButton label="Withdraw" />
+              <ActionButton label="Claim yield" />
             </div>
           </section>
 
           <p className="mt-8 text-center">
-            <Link
-              href="/"
-              className="text-sm text-lethe-orange hover:underline"
-            >
-              ← Back to home
+            <Link href="/" className="text-sm text-lethe-mint transition hover:text-lethe-amber">
+              Back to home
             </Link>
           </p>
         </div>
       </main>
       <Footer />
     </>
+  );
+}
+
+function ActionButton({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="rounded-full border border-lethe-line bg-lethe-ink px-4 py-2 text-sm text-lethe-muted opacity-70"
+    >
+      {label}
+    </button>
   );
 }
