@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { WalletState } from "@/hooks/useWallet";
 import { WalletButton } from "./WalletButton";
 
 export interface NavbarProps {
-  wallet: WalletState & {
-    connectWallet: (type: "argentx" | "braavos") => void;
+  wallet: {
+    isConnected: boolean;
+    address: string | null;
+    isConnecting?: boolean;
+    error?: string | null;
+    connectWallet: () => void;
     disconnectWallet: () => void;
   };
 }
@@ -35,16 +38,11 @@ export function Navbar({ wallet }: NavbarProps) {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/app"
-            className="rounded-full border border-lethe-line bg-lethe-card/75 px-4 py-2 text-sm font-semibold text-lethe-text transition hover:border-lethe-mint/70 hover:text-lethe-mint"
-          >
-            App
-          </Link>
           <WalletButton
             isConnected={wallet.isConnected}
-            walletType={wallet.walletType}
             address={wallet.address}
+            isConnecting={wallet.isConnecting}
+            error={wallet.error}
             onConnect={wallet.connectWallet}
             onDisconnect={wallet.disconnectWallet}
           />

@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, type ApiEnvelope } from "./client";
 
 export interface HealthResponse {
   status: "ok";
@@ -8,7 +8,7 @@ export interface HealthResponse {
 }
 
 export async function health() {
-  const result = await apiRequest<HealthResponse>("/api/health");
-  console.log(result);
+  const envelope = await apiRequest<ApiEnvelope<HealthResponse>>("/api/health");
+  const result = envelope.data;
   return result.status === "ok";
 }

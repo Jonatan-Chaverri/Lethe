@@ -1,12 +1,10 @@
-import { apiRequest } from "./client";
+import { apiRequest, type ApiEnvelope } from "./client";
 
 export interface RegisterWalletPayload {
   wallet: string;
   wallet_provider: string;
-  message_hash: string;
+  nonce: string;
   signature: [string, string];
-  name?: string;
-  email?: string;
 }
 
 export interface BackendUser {
@@ -19,7 +17,8 @@ export interface BackendUser {
 }
 
 export interface RegisterWalletResponse {
-  token: string;
+  access_token: string;
+  refresh_token: string;
   user: BackendUser;
 }
 
@@ -27,16 +26,33 @@ export interface MeResponse {
   user: BackendUser;
 }
 
+export interface RefreshResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
 export async function registerWallet(payload: RegisterWalletPayload) {
-  return apiRequest<RegisterWalletResponse>("/api/auth/register_wallet", {
+  const envelope = await apiRequest<ApiEnvelope<RegisterWalletResponse>>("/api/auth/register_wallet", {
     method: "POST",
     body: payload,
   });
+  return envelope.data;
 }
 
 export async function me(token: string) {
-  return apiRequest<MeResponse>("/api/auth/me", {
+  const envelope = await apiRequest<ApiEnvelope<MeResponse>>("/api/auth/me", {
     method: "GET",
     token,
   });
+  return envelope.data;
+}
+
+export async function refreshSession(refreshToken: string) {
+  const envelope = await apiRequest<ApiEnvelope<RefreshResponse>>("/api/auth/refresh", {
+    method: "POST",
+    body: {
+      refresh_token: refreshToken,
+    },
+  });
+  return envelope.data;
 }

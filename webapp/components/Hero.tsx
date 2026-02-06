@@ -27,12 +27,6 @@ export function Hero({ onTryDemo }: HeroProps) {
             >
               Connect Wallet
             </button>
-            <Link
-              href="/app"
-              className="rounded-full border border-lethe-line bg-lethe-card/70 px-6 py-3 text-sm font-semibold text-lethe-text transition hover:border-lethe-amber/70 hover:text-lethe-amber"
-            >
-              Open Demo App
-            </Link>
           </div>
         </div>
 

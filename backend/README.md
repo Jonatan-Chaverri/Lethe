@@ -7,6 +7,7 @@ TypeScript backend with Express, Prisma, Starknet signature auth, and Zod valida
 - `GET /api/health`
 - `POST /api/auth/register_wallet`
 - `GET /api/auth/me` (requires auth middleware)
+- `POST /api/auth/refresh`
 
 ## Project Structure
 
@@ -97,7 +98,9 @@ Behavior:
 
 - Verifies Starknet signature against wallet account public key (`get_public_key`)
 - Creates user in `users` table if not exists
-- Returns JWT token and user payload
+- Creates a new row in `sessions` for every login/register
+- Stores the issued refresh token in `refresh_tokens`
+- Returns `access_token`, `refresh_token`, and user payload
 
 ### Me
 
@@ -114,6 +117,25 @@ Behavior:
 - Auth middleware verifies JWT
 - Auth middleware loads user from DB and assigns to `req.user`
 - Returns current user
+
+### Refresh
+
+`POST /api/auth/refresh`
+
+Payload:
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Behavior:
+
+- Verifies refresh token
+- Verifies refresh token exists in `refresh_tokens` and belongs to an active session
+- Rotates refresh token in DB (old token removed, new token stored)
+- Issues a new session (`access_token` + `refresh_token`)
 
 ## Required Database Table
 

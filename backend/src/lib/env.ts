@@ -15,7 +15,10 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   databaseUrl: required("DATABASE_URL"),
   starknetRpcUrl: required("STARKNET_RPC_URL"),
-  authJwtSecret: required("AUTH_JWT_SECRET"),
-  authTokenTtl: process.env.AUTH_TOKEN_TTL || "7d",
+  starknetChainId: process.env.STARKNET_CHAIN_ID || "SN_SEPOLIA",
+  authAccessJwtSecret: process.env.AUTH_ACCESS_JWT_SECRET || required("AUTH_JWT_SECRET"),
+  authRefreshJwtSecret: process.env.AUTH_REFRESH_JWT_SECRET || required("AUTH_JWT_SECRET"),
+  authAccessTokenTtl: process.env.AUTH_ACCESS_TOKEN_TTL || "15m",
+  authRefreshTokenTtl: process.env.AUTH_REFRESH_TOKEN_TTL || "30d",
   authSigninMessage: process.env.AUTH_SIGNIN_MESSAGE || "Lethe login",
 };

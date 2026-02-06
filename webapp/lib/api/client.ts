@@ -17,6 +17,13 @@ interface ApiRequestOptions {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
+export interface ApiEnvelope<T> {
+  success: boolean;
+  timestamp: number;
+  message: string;
+  data: T;
+}
+
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {}

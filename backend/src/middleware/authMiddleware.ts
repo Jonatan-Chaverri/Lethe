@@ -18,7 +18,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
       throw new HttpError(401, "Missing bearer token");
     }
 
-    const payload = jwtService.verifyAuthToken(token);
+    const payload = jwtService.verifyAccessToken(token);
     const user = await authService.getUserById(payload.sub);
 
     req.user = user;

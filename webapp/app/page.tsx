@@ -7,11 +7,28 @@ import { Explanation } from "@/components/Explanation";
 import { Stats } from "@/components/Stats";
 import { Footer } from "@/components/Footer";
 import { useMockContracts } from "@/hooks/useMockContracts";
-import { useWallet } from "@/hooks/useWallet";
+import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { health } from "@/lib/api/health";
 
 export default function HomePage() {
-  const wallet = useWallet();
+  const {
+    address,
+    isRegistered,
+    isConnecting,
+    error,
+    connectWallet,
+    disconnectWallet,
+  } = useWalletLogin();
+
+  const wallet = {
+    isConnected: isRegistered,
+    address,
+    isConnecting,
+    error,
+    connectWallet,
+    disconnectWallet,
+  };
+
   const contracts = useMockContracts(wallet.isConnected);
   const [apiStatus, setApiStatus] = useState<"online" | "offline" | "unknown">("unknown");
 
@@ -33,7 +50,7 @@ export default function HomePage() {
 
   const handleTryDemo = () => {
     if (!wallet.isConnected) {
-      wallet.connectWallet("argentx");
+      connectWallet();
     }
   };
 
