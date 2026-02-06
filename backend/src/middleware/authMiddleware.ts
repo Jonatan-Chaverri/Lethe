@@ -1,15 +1,16 @@
-import { HttpError } from "../lib/httpError.js";
-import { jwtService } from "../services/jwtService.js";
-import { authService } from "../services/authService.js";
+import type { NextFunction, Request, Response } from "express";
+import { HttpError } from "../lib/httpError";
+import { authService } from "../services/authService";
+import { jwtService } from "../services/jwtService";
 
-function extractBearerToken(authorizationHeader) {
+function extractBearerToken(authorizationHeader?: string): string | null {
   if (!authorizationHeader) return null;
   const [scheme, token] = authorizationHeader.split(" ");
   if (scheme !== "Bearer" || !token) return null;
   return token;
 }
 
-export async function authMiddleware(req, _res, next) {
+export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
     const token = extractBearerToken(req.headers.authorization);
 

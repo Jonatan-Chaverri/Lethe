@@ -1,5 +1,6 @@
-import { prisma } from "../../db/prisma.js";
-import { HttpError } from "../../lib/httpError.js";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../db/prisma";
+import { HttpError } from "../../lib/httpError";
 
 const USER_SELECT = {
   id: true,
@@ -8,10 +9,19 @@ const USER_SELECT = {
   wallet: true,
   created_at: true,
   wallet_provider: true,
-};
+} satisfies Prisma.UserSelect;
+
+export type DbUser = Prisma.UserGetPayload<{ select: typeof USER_SELECT }>;
+
+interface CreateUserInput {
+  wallet: string;
+  walletProvider: string;
+  name?: string;
+  email?: string;
+}
 
 export const usersDbService = {
-  async findByWallet(wallet) {
+  async findByWallet(wallet: string): Promise<DbUser | null> {
     try {
       return await prisma.user.findUnique({
         where: { wallet },
@@ -22,7 +32,7 @@ export const usersDbService = {
     }
   },
 
-  async findById(id) {
+  async findById(id: string): Promise<DbUser | null> {
     try {
       return await prisma.user.findUnique({
         where: { id },
@@ -33,7 +43,7 @@ export const usersDbService = {
     }
   },
 
-  async createUser({ wallet, walletProvider, name, email }) {
+  async createUser({ wallet, walletProvider, name, email }: CreateUserInput): Promise<DbUser> {
     try {
       return await prisma.user.create({
         data: {
@@ -49,7 +59,7 @@ export const usersDbService = {
     }
   },
 
-  async updateWalletProvider(id, walletProvider) {
+  async updateWalletProvider(id: string, walletProvider: string): Promise<DbUser> {
     try {
       return await prisma.user.update({
         where: { id },

@@ -1,6 +1,6 @@
 # Lethe Backend
 
-Simple Node.js backend with Express, Prisma, Starknet signature auth, and Zod validation.
+TypeScript backend with Express, Prisma, Starknet signature auth, and Zod validation.
 
 ## Endpoints
 
@@ -11,12 +11,13 @@ Simple Node.js backend with Express, Prisma, Starknet signature auth, and Zod va
 ## Project Structure
 
 - `src/routes/` API routes only
-- `src/middleware/` auth, error handling, request logging
+- `src/middleware/` auth, validation, error handling, request logging
 - `src/services/db/` DB-only service layer (Prisma queries)
 - `src/services/` business logic services
 - `src/db/` Prisma client
 - `src/lib/` shared utilities (env, logger, http errors)
 - `src/validators/` Zod schemas
+- `src/types/` shared TypeScript types
 - `prisma/` schema and migrations
 
 ## Setup
@@ -43,20 +44,32 @@ Fill required values in `.env`:
 3. Run migrations:
 
 ```bash
-npm run prisma:migrate:dev
+npm run prisma:migrate
 ```
 
-4. Start API:
+4. Generate Prisma client:
+
+```bash
+npm run prisma:generate
+```
+
+5. Start API:
 
 ```bash
 npm run dev
+```
+
+## TypeScript
+
+```bash
+npm run typecheck
 ```
 
 ## Prisma Commands
 
 ```bash
 npm run prisma:generate
-npm run prisma:migrate:dev
+npm run prisma:migrate
 npm run prisma:migrate:deploy
 npm run prisma:studio
 ```

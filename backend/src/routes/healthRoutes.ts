@@ -1,9 +1,10 @@
 import { Router } from "express";
+import { successResponse } from "../utils/formatting";
 
 export const healthRoutes = Router();
 
 healthRoutes.get("/", (_req, res) => {
-  res.status(200).json({
+  successResponse(res, {
     status: "ok",
     service: "lethe-backend",
     uptime_sec: Math.floor(process.uptime()),

@@ -1,9 +1,11 @@
-import { HttpError } from "../lib/httpError.js";
-import { usersDbService } from "./db/usersDbService.js";
-import { jwtService } from "./jwtService.js";
-import { starknetAuthService } from "./starknetAuthService.js";
+import { HttpError } from "../lib/httpError";
+import type { UserDto } from "../types/auth";
+import { usersDbService, type DbUser } from "./db/usersDbService";
+import { jwtService } from "./jwtService";
+import { starknetAuthService } from "./starknetAuthService";
+import type { RegisterWalletPayload } from "../validators/authSchemas";
 
-function toUserDto(user) {
+function toUserDto(user: DbUser): UserDto {
   return {
     id: user.id,
     name: user.name,
@@ -15,7 +17,7 @@ function toUserDto(user) {
 }
 
 export const authService = {
-  async registerWallet(payload) {
+  async registerWallet(payload: RegisterWalletPayload) {
     const isValid = await starknetAuthService.verifyWalletSignature({
       wallet: payload.wallet,
       messageHash: payload.message_hash,
@@ -39,15 +41,15 @@ export const authService = {
       user = await usersDbService.updateWalletProvider(user.id, payload.wallet_provider);
     }
 
-    const token = jwtService.signAuthToken(user);
+    const userDto = toUserDto(user);
 
     return {
-      token,
-      user: toUserDto(user),
+      token: jwtService.signAuthToken(userDto),
+      user: userDto,
     };
   },
 
-  async getUserById(id) {
+  async getUserById(id: string): Promise<UserDto> {
     const user = await usersDbService.findById(id);
 
     if (!user) {

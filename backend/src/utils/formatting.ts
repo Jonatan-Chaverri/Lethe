@@ -1,0 +1,15 @@
+import type { Response } from "express";
+
+export function successResponse<T>(
+  res: Response,
+  data: T,
+  message = "Success",
+  statusCode = 200
+) {
+  return res.status(statusCode).json({
+    success: true,
+    timestamp: Date.now(),
+    message,
+    data,
+  });
+}

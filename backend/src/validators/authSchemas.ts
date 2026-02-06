@@ -18,3 +18,5 @@ export const registerWalletRequestSchema = z.object({
   query: z.object({}).strict(),
   params: z.object({}).strict(),
 });
+
+export type RegisterWalletPayload = z.infer<typeof registerWalletSchema>;

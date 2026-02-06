@@ -42,7 +42,7 @@ export default function AppDashboardPage() {
           <header>
             <h1 className="font-display text-5xl text-lethe-text">Dashboard</h1>
             <p className="mt-2 text-sm text-lethe-muted">
-              Mocked environment for wallet and vault interactions.
+              Connected to backend auth endpoint (`/api/auth/me`) when a token exists.
             </p>
           </header>
 
@@ -60,11 +60,26 @@ export default function AppDashboardPage() {
                 {wallet.address}
               </p>
             )}
-            {!auth.isAuthenticated && (
-              <p className="mt-3 text-sm text-lethe-rose">
-                Connect a wallet to see your position and yield.
+          </section>
+
+          <section className="mt-5 rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-lethe-muted">
+              Backend user
+            </h2>
+            {auth.isLoading ? (
+              <p className="mt-2 text-sm text-lethe-muted">Loading user...</p>
+            ) : auth.user ? (
+              <div className="mt-2 space-y-1 text-sm text-lethe-text">
+                <p>ID: {auth.user.id}</p>
+                <p>Wallet: {auth.user.wallet}</p>
+                <p>Provider: {auth.user.wallet_provider}</p>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-lethe-muted">
+                No backend session token found. Call `/api/auth/register_wallet` from the client flow to create a session.
               </p>
             )}
+            {auth.error && <p className="mt-2 text-sm text-lethe-rose">{auth.error}</p>}
           </section>
 
           <section className="mt-5 rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
