@@ -18,10 +18,12 @@ function toUserDto(user: DbUser): UserDto {
 }
 
 function createSession(user: UserDto): SessionTokens {
-  return {
-    access_token: jwtService.signAccessToken(user),
-    refresh_token: jwtService.signRefreshToken(user),
-  };
+  const access_token = jwtService.signAccessToken(user);
+  const refresh_token = jwtService.signRefreshToken(user);
+  if (access_token === refresh_token) {
+    throw new Error("Token collision: access and refresh tokens must differ");
+  }
+  return { access_token, refresh_token };
 }
 
 async function persistLoginSession(
