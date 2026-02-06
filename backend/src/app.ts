@@ -1,10 +1,12 @@
 import "express-async-errors";
 import cors from "cors";
 import express from "express";
+import 'express-async-errors';
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { requestLogger } from "./middleware/requestLogger";
 import { authRoutes } from "./routes/authRoutes";
 import { healthRoutes } from "./routes/healthRoutes";
+import { requestId } from "./middleware/requestId";
 
 function allowedOrigin(
   requestOrigin: string | undefined,
@@ -35,6 +37,7 @@ export function createApp() {
   );
 
   app.use(express.json());
+  app.use(requestId);
   app.use(requestLogger);
 
   app.use("/api/health", healthRoutes);

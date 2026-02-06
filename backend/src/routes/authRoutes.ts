@@ -8,19 +8,11 @@ import { registerWalletRequestSchema } from "../validators/authSchemas";
 
 export const authRoutes = Router();
 
-authRoutes.post(
-  "/register_wallet",
-  validate(registerWalletRequestSchema),
-  asyncHandler(async (req, res) => {
-    const result = await authService.registerWallet(req.body);
-    successResponse(res, result);
-  })
-);
+authRoutes.post("/register_wallet", validate(registerWalletRequestSchema), async (req, res) => {
+  const result = await authService.registerWallet(req.body);
+  successResponse(res, result);
+});
 
-authRoutes.get(
-  "/me",
-  authMiddleware,
-  asyncHandler(async (req, res) => {
+authRoutes.get("/me", authMiddleware, async (req, res) => {
     successResponse(res, { user: req.user });
-  })
-);
+});
