@@ -3,7 +3,6 @@ mod nullifier_registry;
 mod verifier;
 mod vault;
 
-#[cfg(test)]
 mod mocks {
     pub mod mock_wbtc;
 }

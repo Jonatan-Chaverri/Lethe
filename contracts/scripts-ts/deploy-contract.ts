@@ -249,8 +249,9 @@ const deployContract_NotWait = async (payload: {
 const findContractFile = (
 	contract: string,
 	fileType: "compiled_contract_class" | "contract_class",
+	targetDirPath: string = "../contracts/target/dev",
 ): string => {
-	const targetDir = path.resolve(__dirname, "../contracts/target/dev");
+	let targetDir = path.resolve(__dirname, targetDirPath);
 	const files = fs.readdirSync(targetDir);
 
 	const pattern = new RegExp(`.*${contract}\\.${fileType}\\.json$`);
@@ -293,18 +294,19 @@ const deployContract = async (
 	classHash: string;
 	address: string;
 }> => {
-	const { contract, constructorArgs, contractName, options } = params;
+	const { contract, constructorArgs, contractName, options, targetDirPath } = params;
 	let compiledContractCasm;
 	let compiledContractSierra;
 
 	try {
 		compiledContractCasm = JSON.parse(
 			fs
-				.readFileSync(findContractFile(contract, "compiled_contract_class"))
+				.readFileSync(findContractFile(contract, "compiled_contract_class", targetDirPath))
 				.toString("ascii"),
 		);
 	} catch (error) {
 		if (error.message.includes("Could not find")) {
+			console.log('targetDirPath', targetDirPath);
 			console.error(
 				red(`The contract "${contract}" doesn't exist or is not compiled`),
 			);
@@ -320,7 +322,7 @@ const deployContract = async (
 	try {
 		compiledContractSierra = JSON.parse(
 			fs
-				.readFileSync(findContractFile(contract, "contract_class"))
+				.readFileSync(findContractFile(contract, "contract_class", targetDirPath))
 				.toString("ascii"),
 		);
 	} catch (error) {
@@ -412,13 +414,13 @@ const deployContract = async (
 	};
 };
 
-export const declareOnly = async (contractName: string) => {
+export const declareOnly = async (contractName: string, targetDirPath: string = "../contracts/target/dev") => {
 	const compiledContractCasm = JSON.parse(
-		fs.readFileSync(findContractFile(contractName, "compiled_contract_class")).toString("ascii")
+		fs.readFileSync(findContractFile(contractName, "compiled_contract_class", targetDirPath)).toString("ascii")
 	);
 
 	const compiledContractSierra = JSON.parse(
-		fs.readFileSync(findContractFile(contractName, "contract_class")).toString("ascii")
+		fs.readFileSync(findContractFile(contractName, "contract_class", targetDirPath)).toString("ascii")
 	);
 
 	console.log(yellow(`Declaring class for upgrade: ${contractName}`));

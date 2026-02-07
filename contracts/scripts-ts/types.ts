@@ -13,4 +13,5 @@ export type DeployContractParams = {
 	contractName?: string;
 	constructorArgs?: RawArgs;
 	options?: UniversalDetails;
+	targetDirPath?: string;
 };

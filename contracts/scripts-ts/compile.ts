@@ -170,6 +170,8 @@ export function smartCompile(options: CompileOptions = {}, feature: string = "")
 				execSync(`cd contracts && scarb build --features ${feature}`, { stdio: "inherit" });
 			} else {
 			     execSync("cd contracts && scarb build", { stdio: "inherit" });
+				 execSync("cd garaga-verifiers/lethe_deposit_verifier && scarb build", { stdio: "inherit" });
+				 execSync("cd garaga-verifiers/lethe_withdraw_verifier && scarb build", { stdio: "inherit" });
 			}
 			console.log("✅ Compilation completed successfully");
 		} catch (error) {

@@ -16,10 +16,52 @@ model User {
   created_at      DateTime       @default(now())
   wallet_provider String
 
-  sessions       Session[]
-  refresh_tokens RefreshToken[]
+  sessions        Session[]
+  refresh_tokens  RefreshToken[]
+  transactions    Transaction[]
+  position        UserPosition?
 
   @@map("users")
+}
+
+enum TransactionStatus {
+  active
+  partially_withdrawn
+  closed
+}
+
+model Transaction {
+  id                  String            @id @default(uuid()) @db.Uuid
+  user_id             String            @db.Uuid
+  deposit_commitment  String
+  deposit_amount_btc  Decimal           @default(0) @db.Decimal(78, 18)
+  deposit_shares      Decimal           @default(0) @db.Decimal(78, 18)
+  deposit_share_price Decimal           @default(0) @db.Decimal(78, 18)
+  withdrawn_shares    Decimal           @default(0) @db.Decimal(78, 18)
+  withdraw_share_price Decimal          @default(0) @db.Decimal(78, 18)
+  status              TransactionStatus @default(active)
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status])
+  @@map("transactions")
+}
+
+model UserPosition {
+  user_id             String   @id @db.Uuid
+  total_active_shares Decimal  @default(0) @db.Decimal(78, 18)
+  total_deposited_btc Decimal  @default(0) @db.Decimal(78, 18)
+  total_withdrawn_btc Decimal  @default(0) @db.Decimal(78, 18)
+  realized_pnl        Decimal  @default(0) @db.Decimal(78, 18)
+  unrealized_pnl      Decimal  @default(0) @db.Decimal(78, 18)
+  updated_at          DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_positions")
 }
 
 model Session {

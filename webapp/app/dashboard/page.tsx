@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useMockContracts } from "@/hooks/useMockContracts";
+import { useWBTC } from "@/hooks/useWBTC";
 import {
   generateDepositProof,
   generateWithdrawProof,
@@ -42,6 +43,15 @@ export default function DashboardPage() {
   const { user, isAuthenticated, isBootstrapping } = useAuth();
   const { address, disconnectWallet } = useWalletLogin();
   const contracts = useMockContracts(isAuthenticated);
+  const {
+    balanceDisplay: wbtcBalanceDisplay,
+    isLoadingBalance: isLoadingWBTC,
+    balanceError: wbtcBalanceError,
+    refetchBalance: refetchWBTCBalance,
+    mint: mintTestnetWBTC,
+    isMinting,
+    mintError: wbtcMintError,
+  } = useWBTC(isAuthenticated);
   const [menuOpen, setMenuOpen] = useState(false);
   const [depositProof, setDepositProof] = useState<CircuitProofResult | null>(null);
   const [withdrawProof, setWithdrawProof] = useState<CircuitProofResult | null>(null);
@@ -185,10 +195,66 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((item) => (
             <StatCard key={item.title} title={item.title} value={item.value} hint={item.hint} />
           ))}
+          <article className="rounded-2xl border border-lethe-line bg-lethe-card/80 p-5 shadow-panel">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-lethe-muted">
+                Wallet WBTC
+              </p>
+              <button
+                type="button"
+                onClick={() => refetchWBTCBalance()}
+                disabled={isLoadingWBTC}
+                aria-label="Reload balance"
+                className="rounded-full p-1.5 text-lethe-muted transition hover:bg-lethe-steel/50 hover:text-lethe-text disabled:opacity-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={isLoadingWBTC ? "animate-spin" : ""}
+                >
+                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                  <path d="M16 21h5v-5" />
+                </svg>
+              </button>
+            </div>
+            <p className="mt-3 font-display text-4xl text-lethe-text">
+              {isLoadingWBTC ? "…" : `${wbtcBalanceDisplay} WBTC`}
+            </p>
+            <p className="mt-2 text-sm text-lethe-muted">
+              Testnet WBTC on your connected wallet.
+            </p>
+            <button
+              type="button"
+              onClick={() => mintTestnetWBTC()}
+              disabled={isMinting || isLoadingWBTC}
+              className="mt-4 rounded-full border border-lethe-mint bg-lethe-card px-4 py-2 text-sm font-semibold text-lethe-mint transition hover:bg-lethe-mint/10 disabled:opacity-50"
+            >
+              {isMinting ? "Minting…" : "Mint testnet WBTC"}
+            </button>
+            {wbtcBalanceError && (
+              <p className="mt-2 text-sm text-lethe-rose" role="alert">
+                {wbtcBalanceError}
+              </p>
+            )}
+            {wbtcMintError && (
+              <p className="mt-2 text-sm text-lethe-rose" role="alert">
+                {wbtcMintError}
+              </p>
+            )}
+          </article>
         </section>
 
         <section className="mt-10 grid gap-4 md:grid-cols-2">

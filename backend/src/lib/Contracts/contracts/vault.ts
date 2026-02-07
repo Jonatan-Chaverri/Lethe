@@ -1,0 +1,18 @@
+import { CairoCustomEnum } from 'starknet';
+import { LetheContracts, TransactionType } from "../types";
+import { getContractAddress } from "../utils";
+import { ChainClient } from "../ChainClient";
+
+export class Vault {
+    private contract: LetheContracts
+	private network: string
+
+    public contractAddress: string
+
+    constructor(network: string) {
+        this.contract = LetheContracts.VAULT
+        this.network = network
+        this.contractAddress = getContractAddress(network, this.contract)
+    }
+
+}

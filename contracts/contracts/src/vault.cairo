@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 pub trait IVault<ContractState> {
     fn get_total_shares(ref self: ContractState) -> u256;
     fn get_share_unit_price(ref self: ContractState) -> u256;
-    fn deposit(ref self: ContractState, amount: u256, commitment: felt252);
+    fn deposit(ref self: ContractState, amount: u256, proof: Array<felt252>, commitment: felt252);
     fn withdraw(
         ref self: ContractState,
         proof: Array<felt252>,
@@ -64,7 +64,8 @@ mod Vault {
         total_shares: u256,
         tree_address: ContractAddress,
         nullifier_registry_address: ContractAddress,
-        verifier_address: ContractAddress,
+        deposit_verifier_address: ContractAddress,
+        withdraw_verifier_address: ContractAddress,
         wbtc_contract: IERC20Dispatcher,
     }
 
@@ -85,7 +86,8 @@ mod Vault {
         admin: ContractAddress,
         nullifier_registry: ContractAddress,
         merkle_tree: ContractAddress,
-        verifier: ContractAddress,
+        deposit_verifier: ContractAddress,
+        withdraw_verifier: ContractAddress,
         wbtc: ContractAddress,
     ) {
         self.accesscontrol.initializer();
@@ -93,7 +95,8 @@ mod Vault {
         self.nullifier_registry_address.write(nullifier_registry);
         self.tree_address.write(merkle_tree);
         self.wbtc_contract.write(IERC20Dispatcher {contract_address: wbtc});
-        self.verifier_address.write(verifier);
+        self.deposit_verifier_address.write(deposit_verifier);
+        self.withdraw_verifier_address.write(withdraw_verifier);
 
         self.total_shares.write(0);
     }
@@ -113,9 +116,11 @@ mod Vault {
             (wbtc_in_contract * UNIT_ATOMS) / total_shares
         }
 
-        fn deposit(ref self: ContractState, amount: u256, commitment: felt252) {
+        fn deposit(ref self: ContractState, amount: u256, proof: Array<felt252>, commitment: felt252) {
             let mut total_shares = self.total_shares.read();
             let total_assets = self.get_total_assets();
+
+            assert(self.verify_deposit_proof(proof.span()).is_ok(), 'Deposit proof is invalid');
 
             let mut minted_shares: u256 = 0;
             if total_shares == 0 {
@@ -151,7 +156,7 @@ mod Vault {
             assert(self.is_valid_root(root), 'Invalid root');
             assert(w_units > 0, 'w units less than 0');
 
-            assert(self.verify_proof(proof), 'Proof is invalid');
+            assert(self.verify_withdraw_proof(proof.span()).is_ok(), 'Withdraw proof is invalid');
 
             self.mark_nullifier_as_spent(nullifier_hash);
 
@@ -225,11 +230,18 @@ mod Vault {
             tree.is_valid_root(root)
         }
 
-        fn verify_proof(ref self: ContractState, proof: Array<felt252>) -> bool {
+        fn verify_deposit_proof(ref self: ContractState, proof: Span<felt252>) -> Result<Span<u256>, felt252> {
             let verifier = IVerifierDispatcher {
-                contract_address: self.verifier_address.read(),
+                contract_address: self.deposit_verifier_address.read(),
             };
-            verifier.verify(proof)
+            verifier.verify_ultra_keccak_zk_honk_proof(proof)
+        }
+        
+        fn verify_withdraw_proof(ref self: ContractState, proof: Span<felt252>) -> Result<Span<u256>, felt252> {
+            let verifier = IVerifierDispatcher {
+                contract_address: self.withdraw_verifier_address.read(),
+            };
+            verifier.verify_ultra_keccak_zk_honk_proof(proof)
         }
     }
 

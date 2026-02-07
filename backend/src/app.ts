@@ -7,6 +7,7 @@ import { requestLogger } from "./middleware/requestLogger";
 import { authRoutes } from "./routes/authRoutes";
 import { healthRoutes } from "./routes/healthRoutes";
 import { requestId } from "./middleware/requestId";
+import { onChainRoutes } from "./routes/onChainRoutes";
 
 function allowedOrigin(
   requestOrigin: string | undefined,
@@ -42,6 +43,7 @@ export function createApp() {
 
   app.use("/api/health", healthRoutes);
   app.use("/api/auth", authRoutes);
+  app.use("/api/onchain", onChainRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
