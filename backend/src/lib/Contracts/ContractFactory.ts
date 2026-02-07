@@ -1,5 +1,5 @@
 import { ERC20Contracts } from "./types"
-import { ERC20Service } from "./contracts"
+import { ERC20Service, Vault } from "./contracts"
 
 export class ContractFactory {
     private network: string
@@ -13,6 +13,10 @@ export class ContractFactory {
             return new ERC20Service(this.network, ERC20Contracts.MOCK_WBTC)
         }
         return new ERC20Service(this.network, ERC20Contracts.WBTC)
+    }
+
+    public getVaultService() {
+        return new Vault(this.network);
     }
 
     public getNetwork() {

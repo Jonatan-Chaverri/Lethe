@@ -92,6 +92,21 @@ export const transactionsDbService = {
     }
   },
 
+  async findByUserIdWhereStatusNotClosed(userId: string): Promise<DbTransaction[]> {
+    try {
+      return await prisma.transaction.findMany({
+        where: {
+          user_id: userId,
+          status: { not: "closed" },
+        },
+        select: TRANSACTION_SELECT,
+        orderBy: { created_at: "desc" },
+      });
+    } catch (error) {
+      throw new HttpError(500, "Failed to query active transactions by user", error);
+    }
+  },
+
   async findByDepositCommitment(
     depositCommitment: string
   ): Promise<DbTransaction | null> {

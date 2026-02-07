@@ -81,7 +81,18 @@ const upgradeMode = async () => {
 	console.log(yellow("🔄 Upgrade mode activated — no redeploys"));
 
 	const deployments = loadExistingDeployments();
+
+	const vault = deployments["Vault"];
+	if (!vault) {
+		console.error(
+			red(
+				"❌ Cannot upgrade — missing Vault in deployments/<network>_latest.json"
+			)
+		);
+		process.exit(1);
+	}
 	exportDeployments();
+	await upgradeOne("Vault", vault.address);
 	console.log(green("✔ All upgrades completed"));
 };
 

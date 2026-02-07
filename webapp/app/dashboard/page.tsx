@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
-import { useMockContracts } from "@/hooks/useMockContracts";
+import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
 import {
   generateDepositProof,
@@ -42,7 +42,12 @@ export default function DashboardPage() {
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
   const { address, disconnectWallet } = useWalletLogin();
-  const contracts = useMockContracts(isAuthenticated);
+  const {
+    currentBalanceDisplay,
+    totalYieldDisplay,
+    isLoading: isLoadingPosition,
+    error: positionError,
+  } = useUserPosition(isAuthenticated);
   const {
     balanceDisplay: wbtcBalanceDisplay,
     isLoadingBalance: isLoadingWBTC,
@@ -59,23 +64,21 @@ export default function DashboardPage() {
   const [activeProof, setActiveProof] = useState<"deposit" | "withdraw" | null>(null);
 
   const walletAddress = address ?? user?.wallet ?? null;
-  const currentBalance = contracts.getUserBalance();
-  const allTimeYield = contracts.getUserYield();
 
   const stats = useMemo(
     () => [
       {
         title: "Current Balance",
-        value: `${currentBalance.toFixed(4)} BTC`,
+        value: isLoadingPosition ? "…" : `${currentBalanceDisplay} BTC`,
         hint: "Private note balance available for future withdrawals.",
       },
       {
         title: "All-time Yield",
-        value: `${allTimeYield.toFixed(4)} BTC`,
+        value: isLoadingPosition ? "…" : `${totalYieldDisplay} BTC`,
         hint: "Total yield earned across all positions.",
-      }
+      },
     ],
-    [allTimeYield, currentBalance]
+    [currentBalanceDisplay, totalYieldDisplay, isLoadingPosition]
   );
 
   useEffect(() => {
@@ -256,6 +259,11 @@ export default function DashboardPage() {
             )}
           </article>
         </section>
+        {positionError && (
+          <p className="mt-4 text-sm text-lethe-rose" role="alert">
+            {positionError}
+          </p>
+        )}
 
         <section className="mt-10 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">

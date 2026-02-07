@@ -1700,7 +1700,7 @@ const deployedContracts = {
                   type: "core::integer::u256",
                 },
               ],
-              state_mutability: "external",
+              state_mutability: "view",
             },
             {
               type: "function",
@@ -1711,7 +1711,7 @@ const deployedContracts = {
                   type: "core::integer::u256",
                 },
               ],
-              state_mutability: "external",
+              state_mutability: "view",
             },
             {
               type: "function",
@@ -2135,7 +2135,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x2607461d8fc6af5b0bfea6cd48f5f162cce3ac65396087a268616fe03c48fa1",
+        "0x3169cd6126418fee2f6234bde2a9dfa2c355b8c71e0815aa26f94792f91aaf1",
     },
     WBTC: {
       address:

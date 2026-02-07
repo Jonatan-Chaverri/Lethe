@@ -2,8 +2,8 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IVault<ContractState> {
-    fn get_total_shares(ref self: ContractState) -> u256;
-    fn get_share_unit_price(ref self: ContractState) -> u256;
+    fn get_total_shares(self: @ContractState) -> u256;
+    fn get_share_unit_price(self: @ContractState) -> u256;
     fn deposit(ref self: ContractState, amount: u256, proof: Array<felt252>, commitment: felt252);
     fn withdraw(
         ref self: ContractState,
@@ -103,11 +103,11 @@ mod Vault {
 
     #[abi(embed_v0)]
     impl VaultImpl of super::IVault<ContractState> {
-        fn get_total_shares(ref self: ContractState) -> u256 {
+        fn get_total_shares(self: @ContractState) -> u256 {
             self.total_shares.read()
         }
 
-        fn get_share_unit_price(ref self: ContractState) -> u256 {
+        fn get_share_unit_price(self: @ContractState) -> u256 {
             let total_shares = self.get_total_shares();
             if total_shares == 0 {
                 return 0;
@@ -196,7 +196,7 @@ mod Vault {
     #[generate_trait]
     impl InternalImpl of InternalTrait {
 
-        fn get_total_assets(ref self: ContractState) -> u256 {
+        fn get_total_assets(self: @ContractState) -> u256 {
             let token_holder = get_contract_address();
             let amount_tokens = self.wbtc_contract.read().balance_of(token_holder);
             amount_tokens

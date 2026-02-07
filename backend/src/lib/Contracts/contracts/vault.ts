@@ -15,4 +15,12 @@ export class Vault {
         this.contractAddress = getContractAddress(network, this.contract)
     }
 
+    public getTotalShares(): ChainClient {
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "get_total_shares",
+            calldata: []
+        }, TransactionType.READ);
+    }
+
 }
