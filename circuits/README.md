@@ -138,3 +138,45 @@ nargo test --package test_data_generator
 2. Run `nargo test`
 3. Run `nargo compile`
 4. Run `nargo execute --package test_data_generator` if test vectors are needed
+
+## Garaga Integration (Cairo Verifier Generation)
+
+This project includes a script to generate Starknet/Cairo verifier projects for the Noir circuits using `bb` + `garaga`.
+
+Prerequisites:
+- `nargo` installed and on PATH
+- `bb` available (global `bb`, or from `webapp/node_modules/.bin/bb`)
+- `garaga` installed (example: `pip install garaga==1.0.1`)
+
+Generate both verifier projects:
+
+```bash
+cd /Users/jonatan/Desktop/Lethe/circuits
+npm run garaga:verifier
+```
+
+Generate a single verifier project:
+
+```bash
+cd /Users/jonatan/Desktop/Lethe/circuits
+npm run garaga:verifier:deposit
+npm run garaga:verifier:withdraw
+```
+
+Outputs:
+- Verification keys:
+  - `target/garaga/deposit/vk.bin`
+  - `target/garaga/withdraw/vk.bin`
+- Cairo verifier projects:
+  - `/Users/jonatan/Desktop/Lethe/contracts/garaga-verifiers/lethe_deposit_verifier`
+  - `/Users/jonatan/Desktop/Lethe/contracts/garaga-verifiers/lethe_withdraw_verifier`
+
+Notes:
+- The script uses `bb write_vk` with `--verifier_target evm` and then runs `garaga gen --system ultra_keccak_zk_honk`.
+- If you explicitly set `VERIFIER_TARGET=starknet` but your `bb` binary shows `Starknet Garaga Extensions: disabled`, the script automatically falls back to `evm`.
+- If the destination project folder already exists, the script fails intentionally to avoid overwriting generated code silently.
+
+Troubleshooting:
+- If Garaga crashes with `Option() missing 1 required positional argument: 'default'`, your Python Typer stack is incompatible. Run:
+  - `pip install --upgrade "typer>=0.12,<1" "click>=8.1,<9" garaga==1.0.1`
+- If Garaga fails while running `scarb fmt`, ensure `scarb --version` works in your current shell (asdf/shims or scarbup setup).

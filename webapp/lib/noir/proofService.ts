@@ -42,10 +42,10 @@ type BbModule = {
   Barretenberg: {
     new: (options?: { threads?: number }) => Promise<any>;
   };
-  UltraHonkBackend: new (acirBytecode: string, options?: { threads?: number }) => any;
-  Fr: new (value: bigint) => any;
+  UltraHonkBackend: new (acirBytecode: string, api: any) => any;
 };
 let bbModulePromise: Promise<BbModule> | null = null;
+let bbApiPromise: Promise<any> | null = null;
 
 async function loadArtifact(circuit: CircuitKind): Promise<CompiledCircuit> {
   if (!artifactCache[circuit]) {
@@ -124,6 +124,16 @@ async function getBbModule(): Promise<BbModule> {
   return bbModulePromise;
 }
 
+async function getBbApi(): Promise<any> {
+  if (!bbApiPromise) {
+    bbApiPromise = (async () => {
+      const { Barretenberg } = await getBbModule();
+      return Barretenberg.new({ threads: 1 });
+    })();
+  }
+  return bbApiPromise;
+}
+
 function randomFieldString(): string {
   const rand = crypto.getRandomValues(new Uint32Array(3));
   const value =
@@ -136,12 +146,28 @@ function randomFieldString(): string {
 
 async function pedersenHash(
   api: Awaited<ReturnType<BbModule["Barretenberg"]["new"]>>,
-  FrClass: BbModule["Fr"],
   values: bigint[]
 ): Promise<bigint> {
-  const frInputs = values.map((value) => new FrClass(value));
-  const output = await api.pedersenHash(frInputs, 0);
-  return BigInt(output.toString());
+  const toFr = (value: bigint): Uint8Array => {
+    const out = new Uint8Array(32);
+    let remaining = value >= BigInt(0) ? value : BigInt(0);
+    for (let i = 31; i >= 0; i -= 1) {
+      out[i] = Number(remaining & BigInt(0xff));
+      remaining >>= BigInt(8);
+    }
+    return out;
+  };
+
+  const output = await api.pedersenHash({
+    inputs: values.map(toFr),
+    hashIndex: 0,
+  });
+
+  let parsed = BigInt(0);
+  for (const byte of output.hash as Uint8Array) {
+    parsed = (parsed << BigInt(8)) + BigInt(byte);
+  }
+  return parsed;
 }
 
 async function buildWithdrawInputs(): Promise<WithdrawInputs> {
@@ -156,61 +182,54 @@ async function buildWithdrawInputs(): Promise<WithdrawInputs> {
   const pathElements = Array.from({ length: depth }, (_, i) => BigInt(i + 123));
   const pathIndices = Array.from({ length: depth }, (_, i) => i % 2 === 1);
 
-  const { Barretenberg, Fr } = await getBbModule();
-  const api = await Barretenberg.new({ threads: 1 });
-  try {
-    const commitment = await pedersenHash(api, Fr, [BigInt(0), secret, nullifier, BigInt(kUnits)]);
-    let hash = await pedersenHash(api, Fr, [BigInt(1), commitment]);
+  const api = await getBbApi();
 
-    for (let i = 0; i < depth; i += 1) {
-      const sibling = pathElements[i];
-      const isRight = pathIndices[i];
-      const left = isRight ? sibling : hash;
-      const right = isRight ? hash : sibling;
-      hash = await pedersenHash(api, Fr, [BigInt(2), left, right]);
-    }
+  const commitment = await pedersenHash(api, [BigInt(0), secret, nullifier, BigInt(kUnits)]);
+  let hash = await pedersenHash(api, [BigInt(1), commitment]);
 
-    const root = hash;
-    const nullifierHash = await pedersenHash(api, Fr, [nullifier]);
-
-    return {
-      secret: secret.toString(),
-      nullifier: nullifier.toString(),
-      path_elements: pathElements.map((item) => item.toString()),
-      path_indices: pathIndices,
-      new_secret: newSecret.toString(),
-      new_nullifier: newNullifier.toString(),
-      root: root.toString(),
-      nullifier_hash: nullifierHash.toString(),
-      k_units: kUnits,
-      w_units: wUnits,
-    };
-  } finally {
-    await api.destroy();
+  for (let i = 0; i < depth; i += 1) {
+    const sibling = pathElements[i];
+    const isRight = pathIndices[i];
+    const left = isRight ? sibling : hash;
+    const right = isRight ? hash : sibling;
+    hash = await pedersenHash(api, [BigInt(2), left, right]);
   }
+
+  const root = hash;
+  const nullifierHash = await pedersenHash(api, [nullifier]);
+
+  return {
+    secret: secret.toString(),
+    nullifier: nullifier.toString(),
+    path_elements: pathElements.map((item) => item.toString()),
+    path_indices: pathIndices,
+    new_secret: newSecret.toString(),
+    new_nullifier: newNullifier.toString(),
+    root: root.toString(),
+    nullifier_hash: nullifierHash.toString(),
+    k_units: kUnits,
+    w_units: wUnits,
+  };
 }
 
 async function prove(circuit: CircuitKind, inputs: DepositInputs | WithdrawInputs): Promise<CircuitProofResult> {
   const artifact = await loadArtifact(circuit);
   const noir = new Noir(artifact);
+  const api = await getBbApi();
   const { UltraHonkBackend } = await getBbModule();
-  const backend = new UltraHonkBackend(artifact.bytecode, { threads: 1 });
+  const backend = new UltraHonkBackend(artifact.bytecode, api);
 
-  try {
-    const { witness } = await noir.execute(inputs);
-    const proofData = await backend.generateProof(witness);
-    const verified = await backend.verifyProof(proofData);
+  const { witness } = await noir.execute(inputs);
+  const proofData = await backend.generateProof(witness);
+  const verified = await backend.verifyProof(proofData);
 
-    return {
-      circuit,
-      proofHex: toHex(proofData.proof),
-      publicInputs: proofData.publicInputs,
-      verified,
-      inputs,
-    };
-  } finally {
-    await backend.destroy();
-  }
+  return {
+    circuit,
+    proofHex: toHex(proofData.proof),
+    publicInputs: proofData.publicInputs,
+    verified,
+    inputs,
+  };
 }
 
 export async function generateDepositProof(): Promise<CircuitProofResult> {

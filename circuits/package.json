@@ -8,14 +8,16 @@
     "test:full": "node test-complete-flow.mjs",
     "test:circuit": "nargo test",
     "compile:circuit": "nargo compile",
-    "compile:and:test": "nargo compile && node test-proof-only.mjs"
+    "compile:and:test": "nargo compile && node test-proof-only.mjs",
+    "garaga:verifier": "./scripts/generate-garaga-verifier.sh all",
+    "garaga:verifier:deposit": "./scripts/generate-garaga-verifier.sh deposit",
+    "garaga:verifier:withdraw": "./scripts/generate-garaga-verifier.sh withdraw"
   },
   "dependencies": {
-    "@aztec/bb.js": "^2.0.4",
-    "@noir-lang/noir_js": "1.0.0-beta.18",
+    "@aztec/bb.js": "^3.0.1",
+    "@noir-lang/noir_js": "1.0.0-beta.16",
     "circomlibjs": "^0.1.7"
   },
-  "devDependencies": {},
   "engines": {
     "node": ">=16.0.0"
   }
