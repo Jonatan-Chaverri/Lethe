@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useMockContracts } from "@/hooks/useMockContracts";
+import {
+  generateDepositProof,
+  generateWithdrawProof,
+  type CircuitProofResult,
+} from "@/lib/noir/proofService";
 
 const MIN_DEPOSIT_BTC = 0.001;
 const MIN_WITHDRAW_BTC = 0.001;
@@ -13,6 +18,11 @@ const MIN_WITHDRAW_BTC = 0.001;
 function truncateAddress(value: string): string {
   if (value.length <= 14) return value;
   return `${value.slice(0, 6)}...${value.slice(-6)}`;
+}
+
+function truncateProof(value: string): string {
+  if (value.length <= 30) return value;
+  return `${value.slice(0, 14)}...${value.slice(-14)}`;
 }
 
 function StatCard({ title, value, hint }: { title: string; value: string; hint: string }) {
@@ -33,6 +43,10 @@ export default function DashboardPage() {
   const { address, disconnectWallet } = useWalletLogin();
   const contracts = useMockContracts(isAuthenticated);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [depositProof, setDepositProof] = useState<CircuitProofResult | null>(null);
+  const [withdrawProof, setWithdrawProof] = useState<CircuitProofResult | null>(null);
+  const [proofError, setProofError] = useState<string | null>(null);
+  const [activeProof, setActiveProof] = useState<"deposit" | "withdraw" | null>(null);
 
   const walletAddress = address ?? user?.wallet ?? null;
   const currentBalance = contracts.getUserBalance();
@@ -81,6 +95,32 @@ export default function DashboardPage() {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [menuOpen]);
+
+  const handleGenerateDepositProof = async () => {
+    setProofError(null);
+    setActiveProof("deposit");
+    try {
+      const result = await generateDepositProof();
+      setDepositProof(result);
+    } catch (error) {
+      setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
+    } finally {
+      setActiveProof(null);
+    }
+  };
+
+  const handleGenerateWithdrawProof = async () => {
+    setProofError(null);
+    setActiveProof("withdraw");
+    try {
+      const result = await generateWithdrawProof();
+      setWithdrawProof(result);
+    } catch (error) {
+      setProofError(error instanceof Error ? error.message : "Failed to generate withdraw proof");
+    } finally {
+      setActiveProof(null);
+    }
+  };
 
   if (isBootstrapping) {
     return (
@@ -162,10 +202,19 @@ export default function DashboardPage() {
             </p>
             <button
               type="button"
+              onClick={handleGenerateDepositProof}
+              disabled={activeProof !== null}
               className="mt-6 rounded-full bg-lethe-mint px-5 py-2.5 text-sm font-semibold text-lethe-ink transition hover:-translate-y-0.5 hover:bg-[#93ffd8]"
             >
-              Start deposit
+              {activeProof === "deposit" ? "Generating proof..." : "Create deposit proof"}
             </button>
+            {depositProof && (
+              <div className="mt-4 rounded-xl border border-lethe-line bg-lethe-steel/30 p-3 text-xs text-lethe-muted">
+                <p className="font-semibold text-lethe-text">Proof generated</p>
+                <p className="mt-1 font-mono">proof: {truncateProof(depositProof.proofHex)}</p>
+                <p className="mt-1">verified: {depositProof.verified ? "true" : "false"}</p>
+              </div>
+            )}
           </article>
 
           <article className="rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel">
@@ -178,12 +227,26 @@ export default function DashboardPage() {
             </p>
             <button
               type="button"
+              onClick={handleGenerateWithdrawProof}
+              disabled={activeProof !== null}
               className="mt-6 rounded-full bg-lethe-amber px-5 py-2.5 text-sm font-semibold text-lethe-ink transition hover:-translate-y-0.5 hover:bg-[#ffc455]"
             >
-              Start withdraw
+              {activeProof === "withdraw" ? "Generating proof..." : "Create withdraw proof"}
             </button>
+            {withdrawProof && (
+              <div className="mt-4 rounded-xl border border-lethe-line bg-lethe-steel/30 p-3 text-xs text-lethe-muted">
+                <p className="font-semibold text-lethe-text">Proof generated</p>
+                <p className="mt-1 font-mono">proof: {truncateProof(withdrawProof.proofHex)}</p>
+                <p className="mt-1">verified: {withdrawProof.verified ? "true" : "false"}</p>
+              </div>
+            )}
           </article>
         </section>
+        {proofError && (
+          <p className="mt-4 text-sm text-lethe-rose" role="alert">
+            {proofError}
+          </p>
+        )}
       </div>
     </main>
   );
