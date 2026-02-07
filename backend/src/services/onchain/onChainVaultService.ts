@@ -1,4 +1,4 @@
-import { ContractFactory } from "@/lib/Contracts";
+import { ContractFactory, UNIT_ATOMS, BTC_ATOMS } from "@/lib/Contracts";
 
 const contractFactory = new ContractFactory();
 const vaultService = contractFactory.getVaultService();
@@ -12,4 +12,15 @@ export async function getSharePrice(): Promise<bigint> {
     }
     const result = totalAssets / totalShares;
     return result;
+}
+
+
+export async function getPurchasableUnits(amountBTC: bigint): Promise<string> {
+    const totalShares = await vaultService.getTotalShares().call() as bigint;
+    const totalAssets = await wbtcService.getBalances(vaultService.contractAddress).call() as bigint;
+    if (totalAssets === 0n) {
+        return (amountBTC * UNIT_ATOMS / BTC_ATOMS).toString();
+    }
+    const result = amountBTC * totalShares / totalAssets;
+    return result.toString();
 }

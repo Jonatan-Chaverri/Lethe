@@ -23,4 +23,12 @@ export class Vault {
         }, TransactionType.READ);
     }
 
+    public getShareUnitPrice(): ChainClient {
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "get_share_unit_price",
+            calldata: []
+        }, TransactionType.READ);
+    }
+
 }

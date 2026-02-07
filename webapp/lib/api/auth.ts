@@ -35,14 +35,14 @@ export async function registerWallet(payload: RegisterWalletPayload) {
   const envelope = await apiRequest<ApiEnvelope<RegisterWalletResponse>>("/api/auth/register_wallet", {
     method: "POST",
     body: payload,
+    auth: false,
   });
   return envelope.data;
 }
 
-export async function me(token: string) {
+export async function me() {
   const envelope = await apiRequest<ApiEnvelope<MeResponse>>("/api/auth/me", {
     method: "GET",
-    token,
   });
   return envelope.data;
 }
@@ -50,6 +50,7 @@ export async function me(token: string) {
 export async function refreshSession(refreshToken: string) {
   const envelope = await apiRequest<ApiEnvelope<RefreshResponse>>("/api/auth/refresh", {
     method: "POST",
+    auth: false,
     body: {
       refresh_token: refreshToken,
     },

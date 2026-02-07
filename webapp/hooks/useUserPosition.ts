@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { authService } from "@/services/authService";
 import { getUserPosition, type UserPositionResponse } from "@/lib/api/userPositions";
 
 function toBtcDisplay(value: string | number): string {
@@ -31,8 +30,7 @@ export function useUserPosition(isAuthenticated: boolean): UseUserPositionResult
   const [error, setError] = useState<string | null>(null);
 
   const fetchPosition = useCallback(async () => {
-    const token = authService.getAccessToken();
-    if (!token || !isAuthenticated) {
+    if (!isAuthenticated) {
       setPosition(null);
       setError(null);
       return;
@@ -40,7 +38,7 @@ export function useUserPosition(isAuthenticated: boolean): UseUserPositionResult
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getUserPosition(token);
+      const result = await getUserPosition();
       setPosition(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch position");

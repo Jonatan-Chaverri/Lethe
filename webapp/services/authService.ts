@@ -1,7 +1,5 @@
-import { ApiError } from "@/lib/api/client";
 import {
   me,
-  refreshSession,
   registerWallet,
   type BackendUser,
   type RegisterWalletPayload,
@@ -39,8 +37,6 @@ function parseStoredUser(raw: string | null): BackendUser | null {
   }
   return null;
 }
-
-let refreshPromise: Promise<SessionTokens | null> | null = null;
 
 export const authService = {
   getAccessToken(): string | null {
@@ -109,83 +105,19 @@ export const authService = {
     };
   },
 
-  async refreshTokens(): Promise<SessionTokens | null> {
-    if (refreshPromise) {
-      return refreshPromise;
-    }
-
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
+  async getMeWithAutoRefresh(): Promise<BackendUser | null> {
+    try {
+      const response = await me();
+      this.setUser(response.user);
+      return response.user;
+    } catch (error) {
       this.clearSession();
       return null;
-    }
-
-    refreshPromise = (async () => {
-      try {
-        const result = await refreshSession(refreshToken);
-        const tokens = {
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
-        };
-        this.setTokens(tokens);
-        return tokens;
-      } catch (error) {
-        this.clearSession();
-        if (error instanceof ApiError && error.status === 401) {
-          return null;
-        }
-        throw error;
-      } finally {
-        refreshPromise = null;
-      }
-    })();
-
-    return refreshPromise;
-  },
-
-  async getMeWithAutoRefresh(): Promise<BackendUser | null> {
-    const response = await this.withAuthRetry((token) => me(token), true);
-    if (!response) return null;
-    this.setUser(response.user);
-    return response.user;
-  },
-
-  async withAuthRetry<T>(
-    request: (accessToken: string) => Promise<T>,
-    returnNullOnAuthFailure = false
-  ): Promise<T | null> {
-    const accessToken = this.getAccessToken();
-    if (!accessToken) {
-      return returnNullOnAuthFailure ? null : Promise.reject(new Error("No access token"));
-    }
-
-    try {
-      return await request(accessToken);
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 401) {
-        throw error;
-      }
-
-      const refreshed = await this.refreshTokens();
-      if (!refreshed) {
-        return returnNullOnAuthFailure ? null : Promise.reject(new Error("Session expired"));
-      }
-
-      try {
-        return await request(refreshed.access_token);
-      } catch (retryError) {
-        if (retryError instanceof ApiError && retryError.status === 401) {
-          this.clearSession();
-          return returnNullOnAuthFailure ? null : Promise.reject(new Error("Session expired"));
-        }
-        throw retryError;
-      }
     }
   },
 
   async bootstrapSession(): Promise<BackendUser | null> {
-    const accessToken = this.getAccessToken();
-    if (!accessToken) {
+    if (!this.getAccessToken() && !this.getRefreshToken()) {
       return null;
     }
     return this.getMeWithAutoRefresh();

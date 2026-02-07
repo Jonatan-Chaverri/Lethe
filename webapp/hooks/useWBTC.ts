@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { authService } from "@/services/authService";
 import { getWBTCBalance, mintTestnetWBTC } from "@/lib/api/onchain";
 
 const WBTC_DECIMALS = 100_000_000;
@@ -39,8 +38,7 @@ export function useWBTC(isAuthenticated: boolean): UseWBTCResult {
   const [mintError, setMintError] = useState<string | null>(null);
 
   const fetchBalance = useCallback(async () => {
-    const token = authService.getAccessToken();
-    if (!token || !isAuthenticated) {
+    if (!isAuthenticated) {
       setBalanceRaw(null);
       setBalanceError(null);
       return;
@@ -48,7 +46,7 @@ export function useWBTC(isAuthenticated: boolean): UseWBTCResult {
     setIsLoadingBalance(true);
     setBalanceError(null);
     try {
-      const result = await getWBTCBalance(token);
+      const result = await getWBTCBalance();
       setBalanceRaw(result);
     } catch (error) {
       setBalanceError(error instanceof Error ? error.message : "Failed to fetch WBTC balance");
@@ -68,12 +66,11 @@ export function useWBTC(isAuthenticated: boolean): UseWBTCResult {
   }, [isAuthenticated, fetchBalance]);
 
   const mint = useCallback(async () => {
-    const token = authService.getAccessToken();
-    if (!token || !isAuthenticated) return;
+    if (!isAuthenticated) return;
     setIsMinting(true);
     setMintError(null);
     try {
-      await mintTestnetWBTC(token);
+      await mintTestnetWBTC();
       await fetchBalance();
     } catch (error) {
       setMintError(error instanceof Error ? error.message : "Failed to mint testnet WBTC");

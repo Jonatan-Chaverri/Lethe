@@ -10,13 +10,19 @@ export type UserPositionResponse = {
 
 /**
  * Fetches the connected wallet's WBTC balance.
- * @param token - Auth access token
  * @returns Balance as string in wei/smallest units. Use a formatting util for human-readable WBTC.
  */
-export async function getUserPosition(token: string): Promise<UserPositionResponse> {
+export async function getUserPosition(): Promise<UserPositionResponse> {
   const envelope = await apiRequest<ApiEnvelope<UserPositionResponse>>("/api/user-positions/getCurrentPosition", {
     method: "GET",
-    token,
+  });
+  return envelope.data;
+}
+
+export async function getPurchasableUnits(amount_btc: number): Promise<bigint> {
+  const envelope = await apiRequest<ApiEnvelope<bigint>>("/api/user-positions/getPurchasableUnits", {
+    method: "POST",
+    body: { amount_btc },
   });
   return envelope.data;
 }

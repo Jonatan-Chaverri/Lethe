@@ -232,11 +232,14 @@ async function prove(circuit: CircuitKind, inputs: DepositInputs | WithdrawInput
   };
 }
 
-export async function generateDepositProof(): Promise<CircuitProofResult> {
+/** WBTC uses 8 decimals: amount in BTC × 10^8 = integer units (no floating point). */
+export const WBTC_UNITS_PER_BTC = 100_000_000;
+
+export async function generateDepositProof(amountUnits: number): Promise<CircuitProofResult> {
   const inputs: DepositInputs = {
     secret: randomFieldString(),
     nullifier: randomFieldString(),
-    k_units: 10,
+    k_units: amountUnits,
   };
 
   return prove("deposit", inputs);

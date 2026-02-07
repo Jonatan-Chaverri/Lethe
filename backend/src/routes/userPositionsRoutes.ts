@@ -3,7 +3,7 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { successResponse } from "../utils/formatting";
 import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
-import { getSharePrice } from "@/services/onchain/onChainVaultService";
+import { getPurchasableUnits, getSharePrice } from "@/services/onchain/onChainVaultService";
 
 export const userPositionsRoutes = Router();
 
@@ -21,4 +21,10 @@ userPositionsRoutes.get("/getCurrentPosition", authMiddleware, async (req, res) 
         total_yield: weiToWbtc(totalYield),
     };
     successResponse(res, result);
+});
+
+userPositionsRoutes.post("/getPurchasableUnits", authMiddleware, async (req, res) => {
+    const { amount_btc } = req.body;
+    const purchasableUnits = await getPurchasableUnits(BigInt(amount_btc));
+    successResponse(res, purchasableUnits);
 });
