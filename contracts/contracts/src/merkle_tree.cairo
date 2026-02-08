@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 pub trait IMerkleTree<ContractState> {
     fn set_vault_address(ref self: ContractState, vault: ContractAddress);
     fn is_valid_root(ref self: ContractState, root: felt252) -> bool;
-    fn insert(ref self: ContractState, commitment: felt252) -> felt252;
+    fn insert(ref self: ContractState, commitment: u256) -> felt252;
 }
 
 
@@ -78,7 +78,7 @@ mod MerkleTree {
     // Emitted when a product is listed to the Marketplace
     #[derive(Drop, PartialEq, starknet::Event)]
     struct CommitmentInserted {
-        commitment: felt252,
+        commitment: u256,
         leaf_index: u64,
         new_root: felt252
     }
@@ -110,7 +110,7 @@ mod MerkleTree {
             false
         }
 
-        fn insert(ref self: ContractState, commitment: felt252) -> felt252 {
+        fn insert(ref self: ContractState, commitment: u256) -> felt252 {
             assert(self.vault_address.read() == get_caller_address(), 'Caller is not vault');
             let mut index = self.next_leaf_index.read();
             assert(index < MAX_LEAVES, 'Index out of bounds');
@@ -175,9 +175,9 @@ mod MerkleTree {
             }
         }
 
-        fn hash_leaf(self: @ContractState, commitment: felt252) -> felt252 {
+        fn hash_leaf(self: @ContractState, commitment: u256) -> felt252 {
             core::poseidon::poseidon_hash_span(
-                [DOMAIN_LEAF, commitment].span()
+                [DOMAIN_LEAF, commitment.low.into(), commitment.high.into()].span()
             )
         }
 

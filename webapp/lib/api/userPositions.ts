@@ -33,10 +33,10 @@ export async function getPurchasableUnits(amount_btc: number): Promise<bigint> {
   return envelope.data;
 }
 
-export async function deposit(proof: string, publicInputs: string[]): Promise<TransactionDetails> {
-  const envelope = await apiRequest<ApiEnvelope<TransactionDetails>>("/api/user-positions/deposit", {
+export async function deposit(proof: string, publicInputs: string[], amount_btc: number): Promise<TransactionDetails[]> {
+  const envelope = await apiRequest<ApiEnvelope<TransactionDetails[]>>("/api/user-positions/deposit", {
     method: "POST",
-    body: { proof, publicInputs },
+    body: { proof, publicInputs, amount_btc },
   });
   return envelope.data;
 }

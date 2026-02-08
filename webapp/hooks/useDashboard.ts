@@ -139,9 +139,7 @@ export function useDashboard() {
       const purchasableUnits = await getPurchasableUnits(amountUnits);
       console.log("purchasableUnits", purchasableUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
-      console.log("result of deposit proof", result);
-
-      const transactionDetails = await deposit(result.proofHex, result.publicInputs);
+      const transactionDetails = await deposit(result.proofHex, result.publicInputs, amountUnits);
       console.log("transaction details", transactionDetails);
 
       let walletToUse = wallet;
@@ -165,13 +163,11 @@ export function useDashboard() {
       const { transaction_hash } = await walletToUse.request({
         type: "wallet_addInvokeTransaction",
         params: {
-          calls: [
-            {
-              contract_address: transactionDetails.contract_address,
-              entry_point: transactionDetails.entrypoint,
-              calldata: transactionDetails.calldata ?? [],
-            },
-          ],
+          calls: transactionDetails.map((transaction) => ({
+            contract_address: transaction.contract_address,
+            entry_point: transaction.entrypoint,
+            calldata: transaction.calldata ?? [],
+          })),
         },
       });
 

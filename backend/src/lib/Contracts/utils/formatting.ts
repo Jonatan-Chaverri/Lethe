@@ -19,3 +19,16 @@ export function wbtcToWei(amount: number): bigint {
 export function weiToWbtc(amount: bigint): number {
 	return Number(amount) / 100_000_000;
 }
+
+/** Converts an array of decimal number strings to a comma-separated string of hex felts (0x-prefixed). */
+export function arrayToFeltHex(array: string[]): string[] {
+	const feltHexArray = array.map((decimalStr) => {
+		const cleaned = decimalStr.replace(/[\r\n]/g, "");
+		return `0x${BigInt(cleaned).toString(16)}`;
+	});
+	const notFeltHexArray = feltHexArray.filter((felt) => felt.length > 65);
+	if (notFeltHexArray.length > 0) {
+		throw new Error(`Invalid felt hex array: ${notFeltHexArray.join(", ")}`);
+	}
+	return feltHexArray;
+}

@@ -1,6 +1,7 @@
 import { ContractFactory } from "@/lib/Contracts";
 import { wbtcToWei } from "@/lib/Contracts/utils/formatting";
 import { logger } from "@/lib/logger";
+import { ChainClient } from "@/lib/Contracts/ChainClient";
 
 const contractFactory = new ContractFactory();
 const wbtcService = contractFactory.getWBTCService();
@@ -19,4 +20,9 @@ export async function mintTestnetWBTC(amountBTC: number, recipient_wallet: strin
         wbtcToWei(amountBTC),
         recipient_wallet
     ).call();
+}
+
+export function increaseAllowance(amount: bigint): ChainClient {
+    const vaultService = contractFactory.getVaultService();
+    return wbtcService.increaseAllowance(amount, vaultService.contractAddress);
 }

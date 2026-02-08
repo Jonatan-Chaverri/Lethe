@@ -5,6 +5,7 @@ import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
 import { deposit, getPurchasableUnits, getSharePrice } from "@/services/onchain/onChainVaultService";
 import { proofToDepositCalldata } from "@/services/onchain/garagaCalldataService";
+import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 
 export const userPositionsRoutes = Router();
 
@@ -31,8 +32,15 @@ userPositionsRoutes.post("/getPurchasableUnits", authMiddleware, async (req, res
 });
 
 userPositionsRoutes.post("/deposit", authMiddleware, async (req, res) => {
-    const { proof, publicInputs } = req.body as { proof: string; publicInputs: string[] };
+    const { proof, publicInputs, amount_btc } = req.body as { 
+        proof: string; publicInputs: string[]; amount_btc: number 
+    };
     const proofCalldata = await proofToDepositCalldata(proof, publicInputs);
-    const result = await deposit(proofCalldata);
-    successResponse(res, result.getTransactionDetails());
+    const depositTransaction = await deposit(proofCalldata);
+    const increaseAllowanceTransaction = increaseAllowance(BigInt(amount_btc));
+    const tranasctions = [
+        increaseAllowanceTransaction.getTransactionDetails(), 
+        depositTransaction.getTransactionDetails()
+    ];
+    successResponse(res, tranasctions);
 });

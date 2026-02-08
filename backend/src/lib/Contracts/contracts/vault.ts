@@ -1,6 +1,6 @@
 import { CairoCustomEnum } from 'starknet';
 import { LetheContracts, TransactionType } from "../types";
-import { getContractAddress } from "../utils";
+import { arrayToFeltHex, getContractAddress } from "../utils";
 import { ChainClient } from "../ChainClient";
 import { logger } from '../../logger';
 
@@ -33,10 +33,11 @@ export class Vault {
     }
 
     public deposit(proofCalldata: string[]): ChainClient {
+        const feltHexCalldata = arrayToFeltHex(proofCalldata);
         return new ChainClient(this.network, {
             contract_address: this.contractAddress,
             entrypoint: "deposit",
-            calldata: proofCalldata
+            calldata: feltHexCalldata
         }, TransactionType.WRITE);
     }
 }

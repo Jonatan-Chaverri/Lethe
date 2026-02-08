@@ -13,7 +13,7 @@ pub trait IVault<ContractState> {
         k_units: u256,
         w_units: u256,
         recipient: ContractAddress,
-        new_commitment: felt252
+        new_commitment: u256
     );
 }
 
@@ -121,7 +121,7 @@ mod Vault {
 
             let proof_result = self.verify_deposit_proof(proof.span());
             let commitment = *proof_result.at(1);
-            let k_units = *proof_result.at(0).try_into().expect('not u256');
+            let k_units = *proof_result.at(0);
 
             let amount_btc_sats: u256 =
                 if total_shares == 0 {
@@ -138,7 +138,7 @@ mod Vault {
             total_shares = total_shares + k_units;
             self.total_shares.write(total_shares);
 
-            self.insert_commitment(commitment.try_into().expect('not felt252'));
+            self.insert_commitment(commitment);
         }
 
         fn withdraw(
@@ -147,9 +147,9 @@ mod Vault {
             root: felt252,
             nullifier_hash: felt252,
             k_units: u256,
-            w_units: u256, 
+            w_units: u256,
             recipient: ContractAddress,
-            new_commitment: felt252
+            new_commitment: u256
         ) {
             assert(!self.is_nullifier_spent(nullifier_hash), 'Nullifier already spent');
             assert(self.is_valid_root(root), 'Invalid root');
@@ -201,7 +201,7 @@ mod Vault {
             amount_tokens
         }
 
-        fn insert_commitment(ref self: ContractState, commitment: felt252) {
+        fn insert_commitment(ref self: ContractState, commitment: u256) {
             let tree = IMerkleTreeDispatcher {
                 contract_address: self.tree_address.read(),
             };
