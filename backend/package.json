@@ -14,12 +14,14 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@aztec/bb.js": "3.0.0-nightly.20251104",
     "@prisma/client": "^5.22.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "ethers": "^6.16.0",
     "express": "^4.21.2",
     "express-async-errors": "^3.1.1",
+    "garaga": "^1.0.1",
     "jsonwebtoken": "^9.0.2",
     "pino": "^10.3.0",
     "pino-pretty": "^13.1.3",

@@ -25,6 +25,6 @@ export async function getPurchasableUnits(amountBTC: bigint): Promise<string> {
     return result.toString();
 }
 
-export async function deposit(proof: Uint8Array): Promise<ChainClient> {
-    return vaultService.deposit(proof);
+export async function deposit(proofCalldata: string[]): Promise<ChainClient> {
+    return vaultService.deposit(proofCalldata);
 }

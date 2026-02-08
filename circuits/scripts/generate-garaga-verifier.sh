@@ -35,11 +35,6 @@ pick_bb() {
     return
   fi
 
-  if command -v bb >/dev/null 2>&1; then
-    BB_CMD=(bb)
-    return
-  fi
-
   if [[ -x "${REPO_ROOT}/webapp/node_modules/.bin/bb" ]]; then
     BB_CMD=("${REPO_ROOT}/webapp/node_modules/.bin/bb")
     return
@@ -47,6 +42,11 @@ pick_bb() {
 
   if [[ -x "${CIRCUITS_DIR}/node_modules/.bin/bb" ]]; then
     BB_CMD=("${CIRCUITS_DIR}/node_modules/.bin/bb")
+    return
+  fi
+
+  if command -v bb >/dev/null 2>&1; then
+    BB_CMD=(bb)
     return
   fi
 

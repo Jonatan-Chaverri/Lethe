@@ -2,10 +2,22 @@
 
 set -euo pipefail
 
-BB_BIN="${BB_BIN:-$HOME/.bb/bb}"
+if [[ -z "${BB_BIN:-}" ]]; then
+  if [[ -x "./node_modules/.bin/bb" ]]; then
+    BB_BIN="./node_modules/.bin/bb"
+  elif command -v bb >/dev/null 2>&1; then
+    BB_BIN="$(command -v bb)"
+  elif [[ -x "$HOME/.bb/bb" ]]; then
+    BB_BIN="$HOME/.bb/bb"
+  else
+    echo "Error: could not find bb binary." >&2
+    echo "Set BB_BIN explicitly, e.g. BB_BIN=./node_modules/.bin/bb" >&2
+    exit 1
+  fi
+fi
+
 if [[ ! -x "${BB_BIN}" ]]; then
   echo "Error: BB_BIN not found or not executable: ${BB_BIN}" >&2
-  echo "Set BB_BIN explicitly, e.g. BB_BIN=$(command -v bb)" >&2
   exit 1
 fi
 

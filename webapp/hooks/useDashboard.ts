@@ -125,14 +125,17 @@ export function useDashboard() {
     setProofError(null);
     setActiveProof("deposit");
     try {
+      console.log("amountUnits", amountUnits);
       const purchasableUnits = await getPurchasableUnits(amountUnits);
+      console.log("purchasableUnits", purchasableUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
       console.log("result of deposit proof", result);
 
-      const transactionDetails = await deposit(result.proofHex);
+      const transactionDetails = await deposit(result.proofHex, result.publicInputs);
       console.log("transaction details", transactionDetails);
       setDepositProof(result);
     } catch (error) {
+      console.log("error in deposit", error);
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
     } finally {
       setActiveProof(null);

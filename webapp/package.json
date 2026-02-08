@@ -9,8 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aztec/aztec.js": "^3.0.1",
-    "@aztec/bb.js": "^3.0.1",
+    "@aztec/bb.js": "3.0.0-nightly.20251104",
     "@noir-lang/noir_js": "^1.0.0-beta.16",
     "next": "^16.1.6",
     "react": "^18.3.1",

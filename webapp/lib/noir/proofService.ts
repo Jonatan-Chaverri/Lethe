@@ -42,7 +42,11 @@ type BbModule = {
   Barretenberg: {
     new: (options?: { threads?: number }) => Promise<any>;
   };
-  UltraHonkBackend: new (acirBytecode: string, api: any) => any;
+  UltraHonkBackend: new (
+    acirBytecode: string,
+    backendOptions?: { threads?: number },
+    circuitOptions?: { recursive?: boolean }
+  ) => any;
 };
 let bbModulePromise: Promise<BbModule> | null = null;
 let bbApiPromise: Promise<any> | null = null;
@@ -215,14 +219,13 @@ async function buildWithdrawInputs(): Promise<WithdrawInputs> {
 async function prove(circuit: CircuitKind, inputs: DepositInputs | WithdrawInputs): Promise<CircuitProofResult> {
   const artifact = await loadArtifact(circuit);
   const noir = new Noir(artifact);
-  const api = await getBbApi();
   const { UltraHonkBackend } = await getBbModule();
-  const backend = new UltraHonkBackend(artifact.bytecode, api);
+  const backend = new UltraHonkBackend(artifact.bytecode, { threads: 1 });
+  const honkOptions = { keccakZK: true };
 
   const { witness } = await noir.execute(inputs);
-  const proofData = await backend.generateProof(witness);
-  const verified = await backend.verifyProof(proofData);
-
+  const proofData = await backend.generateProof(witness, honkOptions);
+  const verified = await backend.verifyProof(proofData, honkOptions);
   return {
     circuit,
     proofHex: toHex(proofData.proof),
