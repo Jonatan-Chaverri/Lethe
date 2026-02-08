@@ -83,6 +83,7 @@ const upgradeMode = async () => {
 	const deployments = loadExistingDeployments();
 
 	const vault = deployments["Vault"];
+	const merkleTree = deployments["MerkleTree"];
 	if (!vault) {
 		console.error(
 			red(
@@ -93,6 +94,7 @@ const upgradeMode = async () => {
 	}
 	exportDeployments();
 	await upgradeOne("Vault", vault.address);
+	await upgradeOne("MerkleTree", merkleTree.address);
 	console.log(green("✔ All upgrades completed"));
 };
 
