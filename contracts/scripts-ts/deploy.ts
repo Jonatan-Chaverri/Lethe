@@ -83,7 +83,6 @@ const upgradeMode = async () => {
 	const deployments = loadExistingDeployments();
 
 	const vault = deployments["Vault"];
-	const merkleTree = deployments["MerkleTree"];
 	if (!vault) {
 		console.error(
 			red(
@@ -94,11 +93,16 @@ const upgradeMode = async () => {
 	}
 	exportDeployments();
 	await upgradeOne("Vault", vault.address);
-	await upgradeOne("MerkleTree", merkleTree.address);
 	console.log(green("✔ All upgrades completed"));
 };
 
 const deployGaragaVerifier = async (verifierType: "deposit" | "withdraw"): Promise<string> => {
+	if (verifierType === "deposit" && process.env.DEPOSIT_VERIFIER_ADDRESS) {
+		return process.env.DEPOSIT_VERIFIER_ADDRESS;
+	}
+	if (verifierType === "withdraw" && process.env.WITHDRAW_VERIFIER_ADDRESS) {
+		return process.env.WITHDRAW_VERIFIER_ADDRESS;
+	}
 	const { address: verifierAddress } = await deployContract({
 		contract: `lethe_${verifierType}_verifier_UltraKeccakZKHonkVerifier`,
 		targetDirPath: `../garaga-verifiers/lethe_${verifierType}_verifier/target/dev`,

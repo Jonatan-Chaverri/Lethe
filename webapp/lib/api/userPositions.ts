@@ -40,3 +40,11 @@ export async function deposit(proof: string, publicInputs: string[], amount_btc:
   });
   return envelope.data;
 }
+
+export async function depositCallback(transaction_hash: string, deposit_units: number): Promise<void> {
+  const envelope = await apiRequest<ApiEnvelope<void>>("/api/user-positions/deposit/callback", {
+    method: "POST",
+    body: { transaction_hash, deposit_units },
+  });
+  return envelope.data;
+}

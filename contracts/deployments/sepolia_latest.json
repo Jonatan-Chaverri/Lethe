@@ -2,11 +2,6 @@
   "Vault": {
     "contract": "Vault",
     "address": "0x660cff7f058e59ca05517d92a795c7c173005fb41efd606496879d8ddfbae37",
-    "classHash": "0x54d9a98c9df8e6a3a033d86191b37b379f97ec07ea796bd3e769e472d925d41"
-  },
-  "MerkleTree": {
-    "contract": "MerkleTree",
-    "address": "0x7e22cf8bda696dd1c23dc57a56de6ff757e378c8a832a996b7939ce3447c72",
-    "classHash": "0x23009cde47cb3fdabae7bd47636917cbec21079ab21614a053259c1197da303"
+    "classHash": "0x3457370710f6a16ccd7e1f430953ea5259a7c06714ec662760c9de2963d6c3d"
   }
 }

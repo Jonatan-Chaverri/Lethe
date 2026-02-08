@@ -2,7 +2,7 @@ import { CairoCustomEnum } from 'starknet';
 import { LetheContracts, TransactionType } from "../types";
 import { arrayToFeltHex, getContractAddress } from "../utils";
 import { ChainClient } from "../ChainClient";
-import { logger } from '../../logger';
+import { format_number } from "../utils/formatting";
 
 export class Vault {
     private contract: LetheContracts
@@ -24,11 +24,29 @@ export class Vault {
         }, TransactionType.READ);
     }
 
-    public getShareUnitPrice(): ChainClient {
+    public getSharePrice(): ChainClient {
         return new ChainClient(this.network, {
             contract_address: this.contractAddress,
-            entrypoint: "get_share_unit_price",
+            entrypoint: "get_share_price",
             calldata: []
+        }, TransactionType.READ);
+    }
+
+    public getKUnitsPrice(kUnits: bigint): ChainClient {
+        const kUnitsFormmated = format_number(kUnits);
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "get_k_units_price",
+            calldata: [kUnitsFormmated.low, kUnitsFormmated.high]
+        }, TransactionType.READ);
+    }
+
+    public getPurchasableKUnits(amountBTC: bigint): ChainClient {
+        const amountBTCFormmated = format_number(amountBTC);
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "get_purchasable_k_units",
+            calldata: [amountBTCFormmated.low, amountBTCFormmated.high]
         }, TransactionType.READ);
     }
 

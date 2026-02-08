@@ -45,8 +45,40 @@ const deployedContracts = {
             },
             {
               type: "function",
-              name: "get_share_unit_price",
+              name: "get_share_price",
               inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_k_units_price",
+              inputs: [
+                {
+                  name: "k_units",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_purchasable_k_units",
+              inputs: [
+                {
+                  name: "amount_btc",
+                  type: "core::integer::u256",
+                },
+              ],
               outputs: [
                 {
                   type: "core::integer::u256",
@@ -468,7 +500,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x54d9a98c9df8e6a3a033d86191b37b379f97ec07ea796bd3e769e472d925d41",
+        "0x3457370710f6a16ccd7e1f430953ea5259a7c06714ec662760c9de2963d6c3d",
     },
     MerkleTree: {
       address:

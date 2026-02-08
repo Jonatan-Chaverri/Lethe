@@ -32,3 +32,12 @@ export function arrayToFeltHex(array: string[]): string[] {
 	}
 	return feltHexArray;
 }
+
+export function normalizeAddress(addr: string): string {
+	const normalized = addr.toLowerCase().replace(/^0x/, '').replace(/^0+/, '');
+	return normalized || '0';
+};
+
+export function isSameAddress(addr1: string, addr2: string): boolean {
+	return normalizeAddress(addr1) === normalizeAddress(addr2);
+};

@@ -3,7 +3,9 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IVault<ContractState> {
     fn get_total_shares(self: @ContractState) -> u256;
-    fn get_share_unit_price(self: @ContractState) -> u256;
+    fn get_share_price(self: @ContractState) -> u256;
+    fn get_k_units_price(self: @ContractState, k_units: u256) -> u256;
+    fn get_purchasable_k_units(self: @ContractState, amount_btc: u256) -> u256;
     fn deposit(ref self: ContractState, proof: Array<felt252>);
     fn withdraw(
         ref self: ContractState,
@@ -47,10 +49,10 @@ mod Vault {
     // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
-    // 0.00001 share or 10^-5 atoms
-    // this is the smallest unit a user can buy or sell
-    const UNIT_ATOMS: u256 = 100000;
-    const BTC_ATOMS: u256 = 100000000;
+    // This is the scale factor for the share units
+    const UNIT_ATOMS: u256 = 1000;
+
+    const INITIAL_SHARE_PRICE_SATS: u256 = 1000; // 0.00001 BTC
 
     #[storage]
     struct Storage {
@@ -106,37 +108,38 @@ mod Vault {
             self.total_shares.read()
         }
 
-        fn get_share_unit_price(self: @ContractState) -> u256 {
-            let total_shares = self.get_total_shares();
-            if total_shares == 0 {
-                return 0;
-            }
-            let wbtc_in_contract = self.get_total_assets();
-            (wbtc_in_contract * UNIT_ATOMS) / total_shares
+        fn get_share_price(self: @ContractState) -> u256 {
+            self._get_share_price()
+        }
+
+        fn get_k_units_price(self: @ContractState, k_units: u256) -> u256 {
+            // each k_unit is 0,001 unit of a share, its the minimum unit to deposit/withdraw
+            self._k_units_price(k_units)
+        }
+
+        fn get_purchasable_k_units(self: @ContractState, amount_btc: u256) -> u256 {
+            // each k_unit is 0,001 unit of a share, its the minimum unit to deposit/withdraw
+            let price_per_k_unit = self._k_units_price(1);
+            amount_btc / price_per_k_unit
         }
 
         fn deposit(ref self: ContractState, proof: Array<felt252>) {
-            let mut total_shares = self.total_shares.read();
+            let mut total_shares_in_k_units = self.total_shares.read();
             let total_assets = self.get_total_assets();
 
             let proof_result = self.verify_deposit_proof(proof.span());
             let commitment = *proof_result.at(1);
-            let k_units = *proof_result.at(0);
 
-            let amount_btc_sats: u256 =
-                if total_shares == 0 {
-                    k_units * BTC_ATOMS / UNIT_ATOMS
-                } else {
-                    // Normal pricing
-                    (k_units * total_assets) / total_shares
-                };
+            // each k_unit is 0,001 unit of a share, its the minimum unit to deposit
+            let k_units = *proof_result.at(0);
+            let k_units_price = self._k_units_price(k_units);
 
             self.wbtc_contract.read().transfer_from(
-                get_caller_address(), get_contract_address(), amount_btc_sats
+                get_caller_address(), get_contract_address(), k_units_price
             );
 
-            total_shares = total_shares + k_units;
-            self.total_shares.write(total_shares);
+            total_shares_in_k_units = total_shares_in_k_units + k_units;
+            self.total_shares.write(total_shares_in_k_units);
 
             self.insert_commitment(commitment);
         }
@@ -194,6 +197,25 @@ mod Vault {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
+
+        fn _get_share_price(self: @ContractState) -> u256 {
+            let total_shares_in_k_units = self.get_total_shares();
+            if (total_shares_in_k_units/UNIT_ATOMS) == 0 {
+                // Not a single share in the contract, return the initial share price
+                return INITIAL_SHARE_PRICE_SATS;
+            }
+            let wbtc_in_contract = self.get_total_assets();
+            wbtc_in_contract * UNIT_ATOMS / total_shares_in_k_units
+        }
+
+        fn _k_units_price(self: @ContractState, k_units: u256) -> u256 {
+            let total_shares_in_k_units = self.get_total_shares();
+            if (total_shares_in_k_units/UNIT_ATOMS) == 0 {
+                return (INITIAL_SHARE_PRICE_SATS * k_units) / UNIT_ATOMS;
+            }
+            let wbtc_in_contract = self.get_total_assets();
+            wbtc_in_contract * k_units / total_shares_in_k_units
+        }
 
         fn get_total_assets(self: @ContractState) -> u256 {
             let token_holder = get_contract_address();

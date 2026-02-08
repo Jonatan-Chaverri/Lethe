@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
-import { deposit, getPurchasableUnits } from "@/lib/api/userPositions";
+import { deposit, depositCallback, getPurchasableUnits } from "@/lib/api/userPositions";
 import {
   generateDepositProof,
   generateWithdrawProof,
@@ -171,6 +171,7 @@ export function useDashboard() {
         },
       });
 
+      await depositCallback(transaction_hash, amountUnits);
       console.log("deposit tx hash", transaction_hash);
       setDepositProof(result);
       setProofError(null);

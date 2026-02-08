@@ -98,3 +98,29 @@ model RefreshToken {
   @@index([expires_at])
   @@map("refresh_tokens")
 }
+
+model MerkleLeaf {
+  id            String   @id @default(uuid()) @db.Uuid
+  commitment    String
+  leaf_index    BigInt
+  inserted_root String
+  tx_hash       String
+  block_number  BigInt
+  created_at    DateTime @default(now())
+
+  @@index([leaf_index])
+  @@index([block_number])
+  @@index([inserted_root])
+  @@map("merkle_leaves")
+}
+
+model MerkleRoot {
+  id           String   @id @default(uuid()) @db.Uuid
+  root         String
+  block_number BigInt
+  tx_hash      String
+  created_at   DateTime @default(now())
+
+  @@index([block_number])
+  @@map("merkle_roots")
+}
