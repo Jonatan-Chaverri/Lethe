@@ -11,7 +11,8 @@
     "compile:and:test": "nargo compile && node test-proof-only.mjs",
     "garaga:verifier": "./scripts/generate-garaga-verifier.sh all",
     "garaga:verifier:deposit": "./scripts/generate-garaga-verifier.sh deposit",
-    "garaga:verifier:withdraw": "./scripts/generate-garaga-verifier.sh withdraw"
+    "garaga:verifier:withdraw": "./scripts/generate-garaga-verifier.sh withdraw",
+    "garaga:test:deposit": "./test_deposit.sh"
   },
   "dependencies": {
     "@aztec/bb.js": "^3.0.1",
