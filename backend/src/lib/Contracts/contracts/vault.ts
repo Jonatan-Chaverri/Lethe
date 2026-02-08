@@ -33,7 +33,6 @@ export class Vault {
     }
 
     public deposit(proofCalldata: string[]): ChainClient {
-        logger.info(`Depositing proof calldata items: ${proofCalldata.length}`);
         return new ChainClient(this.network, {
             contract_address: this.contractAddress,
             entrypoint: "deposit",

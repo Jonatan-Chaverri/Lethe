@@ -13,6 +13,7 @@ import {
   WBTC_UNITS_PER_BTC,
   type CircuitProofResult,
 } from "@/lib/noir/proofService";
+import { connect } from "starknetkit";
 
 export const MIN_DEPOSIT_BTC = 0.001;
 export const MIN_WITHDRAW_BTC = 0.001;
@@ -28,7 +29,7 @@ export function useDashboard() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
-  const { address, disconnectWallet } = useWalletLogin();
+  const { address, wallet, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
   const {
     currentBalanceDisplay,
     totalYieldDisplay,
@@ -104,6 +105,15 @@ export function useDashboard() {
     setDepositAmountError(null);
   };
 
+  const trySilentConnect = async () => {
+    try {
+      const { wallet, connectorData } = await connect({ modalMode: "neverAsk" })
+      return wallet && connectorData?.account ? { wallet, connectorData } : null
+    } catch {
+      return null
+    }
+  }
+
   const handleConfirmDepositAmount = async () => {
     setDepositAmountError(null);
     const trimmed = depositAmountInput.trim();
@@ -133,7 +143,41 @@ export function useDashboard() {
 
       const transactionDetails = await deposit(result.proofHex, result.publicInputs);
       console.log("transaction details", transactionDetails);
+
+      let walletToUse = wallet;
+      if (!walletToUse) {
+        const reconnected = await trySilentConnect();
+        walletToUse = reconnected?.wallet ?? null;
+        if (!walletToUse) {
+          try {
+            const result = await connectWalletWithoutSignature();
+            walletToUse = result?.wallet ?? null;
+          } catch {
+            // User cancelled or connection failed
+          }
+        }
+        if (!walletToUse) {
+          setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");
+          return;
+        }
+      }
+
+      const { transaction_hash } = await walletToUse.request({
+        type: "wallet_addInvokeTransaction",
+        params: {
+          calls: [
+            {
+              contract_address: transactionDetails.contract_address,
+              entry_point: transactionDetails.entrypoint,
+              calldata: transactionDetails.calldata ?? [],
+            },
+          ],
+        },
+      });
+
+      console.log("deposit tx hash", transaction_hash);
       setDepositProof(result);
+      setProofError(null);
     } catch (error) {
       console.log("error in deposit", error);
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
