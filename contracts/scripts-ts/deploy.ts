@@ -98,9 +98,11 @@ const upgradeMode = async () => {
 
 const deployGaragaVerifier = async (verifierType: "deposit" | "withdraw"): Promise<string> => {
 	if (verifierType === "deposit" && process.env.DEPOSIT_VERIFIER_ADDRESS) {
+		console.log(green(`✔ Deposit verifier address found in environment variables: ${process.env.DEPOSIT_VERIFIER_ADDRESS}`));
 		return process.env.DEPOSIT_VERIFIER_ADDRESS;
 	}
 	if (verifierType === "withdraw" && process.env.WITHDRAW_VERIFIER_ADDRESS) {
+		console.log(green(`✔ Withdraw verifier address found in environment variables: ${process.env.WITHDRAW_VERIFIER_ADDRESS}`));
 		return process.env.WITHDRAW_VERIFIER_ADDRESS;
 	}
 	const { address: verifierAddress } = await deployContract({

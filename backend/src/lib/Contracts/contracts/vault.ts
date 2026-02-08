@@ -42,11 +42,10 @@ export class Vault {
     }
 
     public getPurchasableKUnits(amountBTC: bigint): ChainClient {
-        const amountBTCFormmated = format_number(amountBTC);
         return new ChainClient(this.network, {
             contract_address: this.contractAddress,
             entrypoint: "get_purchasable_k_units",
-            calldata: [amountBTCFormmated.low, amountBTCFormmated.high]
+            calldata: [amountBTC]
         }, TransactionType.READ);
     }
 

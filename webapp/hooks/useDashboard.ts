@@ -35,6 +35,7 @@ export function useDashboard() {
     totalYieldDisplay,
     isLoading: isLoadingPosition,
     error: positionError,
+    refetch: refetchUserPosition,
   } = useUserPosition(isAuthenticated);
   const {
     balanceDisplay: wbtcBalanceDisplay,
@@ -54,6 +55,8 @@ export function useDashboard() {
   const [depositAmountOpen, setDepositAmountOpen] = useState(false);
   const [depositAmountInput, setDepositAmountInput] = useState("");
   const [depositAmountError, setDepositAmountError] = useState<string | null>(null);
+  /** "pending" = wait modal, "success" = success message then auto-close */
+  const [depositModalStatus, setDepositModalStatus] = useState<"pending" | "success" | null>(null);
 
   const walletAddress = address ?? user?.wallet ?? null;
 
@@ -134,6 +137,7 @@ export function useDashboard() {
     setDepositAmountOpen(false);
     setProofError(null);
     setActiveProof("deposit");
+    setDepositModalStatus("pending");
     try {
       console.log("amountUnits", amountUnits);
       const purchasableUnits = await getPurchasableUnits(amountUnits);
@@ -156,6 +160,7 @@ export function useDashboard() {
         }
         if (!walletToUse) {
           setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");
+          setDepositModalStatus(null);
           return;
         }
       }
@@ -171,13 +176,19 @@ export function useDashboard() {
         },
       });
 
+      // wait for the transaction to be mined for 5 seconds
+      await new Promise(resolve => setTimeout(resolve, 5000));
       await depositCallback(transaction_hash, amountUnits);
       console.log("deposit tx hash", transaction_hash);
       setDepositProof(result);
       setProofError(null);
+      setDepositModalStatus("success");
+      await refetchUserPosition();
+      setTimeout(() => setDepositModalStatus(null), 2000);
     } catch (error) {
       console.log("error in deposit", error);
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
+      setDepositModalStatus(null);
     } finally {
       setActiveProof(null);
     }
@@ -232,5 +243,6 @@ export function useDashboard() {
     handleCloseDepositAmount,
     handleConfirmDepositAmount,
     handleGenerateWithdrawProof,
+    depositModalStatus,
   };
 }

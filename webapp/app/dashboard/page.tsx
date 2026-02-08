@@ -46,6 +46,7 @@ export default function DashboardPage() {
     handleCloseDepositAmount,
     handleConfirmDepositAmount,
     handleGenerateWithdrawProof,
+    depositModalStatus,
   } = useDashboard();
 
   if (isBootstrapping) {
@@ -251,6 +252,36 @@ export default function DashboardPage() {
                 <p className="font-semibold text-lethe-text">Proof generated</p>
                 <p className="mt-1 font-mono">proof: {truncateProof(depositProof.proofHex)}</p>
                 <p className="mt-1">verified: {depositProof.verified ? "true" : "false"}</p>
+              </div>
+            )}
+            {depositModalStatus && (
+              <div
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-lethe-ink/70 px-4"
+                aria-modal="true"
+                role="dialog"
+                aria-live="polite"
+              >
+                <div className="w-full max-w-sm rounded-2xl border border-lethe-line bg-lethe-card p-8 shadow-panel text-center">
+                  {depositModalStatus === "pending" ? (
+                    <>
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-lethe-amber border-t-transparent animate-spin" />
+                      <h3 className="font-display text-xl text-lethe-text">Processing deposit</h3>
+                      <p className="mt-2 text-sm text-lethe-muted">
+                        Confirm in your wallet and wait for the transaction to be mined.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-lethe-mint/20 text-lethe-mint">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <h3 className="font-display text-xl text-lethe-text">Deposit successful</h3>
+                      <p className="mt-2 text-sm text-lethe-muted">Your position balance will update shortly.</p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </article>
