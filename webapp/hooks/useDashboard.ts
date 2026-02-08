@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
-import { getPurchasableUnits } from "@/lib/api/userPositions";
+import { deposit, getPurchasableUnits } from "@/lib/api/userPositions";
 import {
   generateDepositProof,
   generateWithdrawProof,
@@ -128,6 +128,9 @@ export function useDashboard() {
       const purchasableUnits = await getPurchasableUnits(amountUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
       console.log("result of deposit proof", result);
+
+      const transactionDetails = await deposit(result.proofHex);
+      console.log("transaction details", transactionDetails);
       setDepositProof(result);
     } catch (error) {
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");

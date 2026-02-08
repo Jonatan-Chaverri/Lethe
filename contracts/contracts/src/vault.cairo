@@ -120,8 +120,8 @@ mod Vault {
             let total_assets = self.get_total_assets();
 
             let proof_result = self.verify_deposit_proof(proof.span());
-            let commitment = *proof_result.at(0);
-            let k_units = *proof_result.at(1).try_into().expect('not u256');
+            let commitment = *proof_result.at(1);
+            let k_units = *proof_result.at(0).try_into().expect('not u256');
 
             let amount_btc_sats: u256 =
                 if total_shares == 0 {

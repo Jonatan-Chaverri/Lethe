@@ -16,7 +16,9 @@ cp target/withdraw.json ../webapp/public/noir/withdraw.json
 echo "Updating garaga verifiers..."
 rm -rf ../contracts/garaga-verifiers
 source .venv/bin/activate
+bb write_vk -s ultra_honk --oracle_hash keccak -b target/deposit.json -o target/vk_deposit
 npm run garaga:verifier:deposit
+bb write_vk -s ultra_honk --oracle_hash keccak -b target/withdraw.json -o target/vk_withdraw
 npm run garaga:verifier:withdraw
 deactivate
 

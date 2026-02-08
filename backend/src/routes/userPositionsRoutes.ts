@@ -3,7 +3,8 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { successResponse } from "../utils/formatting";
 import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
-import { getPurchasableUnits, getSharePrice } from "@/services/onchain/onChainVaultService";
+import { deposit, getPurchasableUnits, getSharePrice } from "@/services/onchain/onChainVaultService";
+import { ethers } from "ethers";
 
 export const userPositionsRoutes = Router();
 
@@ -27,4 +28,11 @@ userPositionsRoutes.post("/getPurchasableUnits", authMiddleware, async (req, res
     const { amount_btc } = req.body;
     const purchasableUnits = await getPurchasableUnits(BigInt(amount_btc));
     successResponse(res, purchasableUnits);
+});
+
+userPositionsRoutes.post("/deposit", authMiddleware, async (req, res) => {
+    const { proof } = req.body;
+    const proofBytes = ethers.getBytes(proof);
+    const result = await deposit(proofBytes);
+    successResponse(res, result.getTransactionDetails());
 });

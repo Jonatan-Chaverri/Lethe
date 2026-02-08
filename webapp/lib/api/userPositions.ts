@@ -8,6 +8,12 @@ export type UserPositionResponse = {
   total_yield: string;
 };
 
+export type TransactionDetails = {
+  contract_address: string;
+  entrypoint: string;
+  calldata: string[];
+};
+
 /**
  * Fetches the connected wallet's WBTC balance.
  * @returns Balance as string in wei/smallest units. Use a formatting util for human-readable WBTC.
@@ -23,6 +29,14 @@ export async function getPurchasableUnits(amount_btc: number): Promise<bigint> {
   const envelope = await apiRequest<ApiEnvelope<bigint>>("/api/user-positions/getPurchasableUnits", {
     method: "POST",
     body: { amount_btc },
+  });
+  return envelope.data;
+}
+
+export async function deposit(proof: string): Promise<TransactionDetails> {
+  const envelope = await apiRequest<ApiEnvelope<TransactionDetails>>("/api/user-positions/deposit", {
+    method: "POST",
+    body: { proof },
   });
   return envelope.data;
 }

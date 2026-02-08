@@ -1,4 +1,4 @@
-import { ContractFactory, UNIT_ATOMS, BTC_ATOMS } from "@/lib/Contracts";
+import { ContractFactory, UNIT_ATOMS, BTC_ATOMS, ChainClient } from "@/lib/Contracts";
 
 const contractFactory = new ContractFactory();
 const vaultService = contractFactory.getVaultService();
@@ -23,4 +23,8 @@ export async function getPurchasableUnits(amountBTC: bigint): Promise<string> {
     }
     const result = amountBTC * totalShares / totalAssets;
     return result.toString();
+}
+
+export async function deposit(proof: Uint8Array): Promise<ChainClient> {
+    return vaultService.deposit(proof);
 }
