@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 pub trait IVault<ContractState> {
     fn get_total_shares(self: @ContractState) -> u256;
     fn get_share_unit_price(self: @ContractState) -> u256;
-    fn deposit(ref self: ContractState, amount: u256, proof: Array<felt252>, commitment: felt252);
+    fn deposit(ref self: ContractState, proof: Array<felt252>);
     fn withdraw(
         ref self: ContractState,
         proof: Array<felt252>,
@@ -50,8 +50,7 @@ mod Vault {
     // 0.00001 share or 10^-5 atoms
     // this is the smallest unit a user can buy or sell
     const UNIT_ATOMS: u256 = 100000;
-
-    const ONE_E18: u256 = 1000000000000000000;
+    const BTC_ATOMS: u256 = 100000000;
 
     #[storage]
     struct Storage {
@@ -116,30 +115,30 @@ mod Vault {
             (wbtc_in_contract * UNIT_ATOMS) / total_shares
         }
 
-        fn deposit(ref self: ContractState, amount: u256, proof: Array<felt252>, commitment: felt252) {
+        fn deposit(ref self: ContractState, proof: Array<felt252>) {
             let mut total_shares = self.total_shares.read();
             let total_assets = self.get_total_assets();
 
-            assert(self.verify_deposit_proof(proof.span()).is_ok(), 'Deposit proof is invalid');
+            let proof_result = self.verify_deposit_proof(proof.span());
+            let commitment = *proof_result.at(0);
+            let k_units = *proof_result.at(1).try_into().expect('not u256');
 
-            let mut minted_shares: u256 = 0;
-            if total_shares == 0 {
-                minted_shares = amount;
-            } else {
-                minted_shares = (amount * total_shares) / total_assets;
-            }
-
-            let k = minted_shares / UNIT_ATOMS;
-            assert(k > 0, 'Share unit not reached');
+            let amount_btc_sats: u256 =
+                if total_shares == 0 {
+                    k_units * BTC_ATOMS / UNIT_ATOMS
+                } else {
+                    // Normal pricing
+                    (k_units * total_assets) / total_shares
+                };
 
             self.wbtc_contract.read().transfer_from(
-                get_caller_address(), get_contract_address(), amount
+                get_caller_address(), get_contract_address(), amount_btc_sats
             );
 
-            total_shares = total_shares + (k * UNIT_ATOMS);
+            total_shares = total_shares + k_units;
             self.total_shares.write(total_shares);
 
-            self.insert_commitment(commitment);
+            self.insert_commitment(commitment.try_into().expect('not felt252'));
         }
 
         fn withdraw(
@@ -156,7 +155,7 @@ mod Vault {
             assert(self.is_valid_root(root), 'Invalid root');
             assert(w_units > 0, 'w units less than 0');
 
-            assert(self.verify_withdraw_proof(proof.span()).is_ok(), 'Withdraw proof is invalid');
+            let proof_result = self.verify_withdraw_proof(proof.span());
 
             self.mark_nullifier_as_spent(nullifier_hash);
 
@@ -230,19 +229,24 @@ mod Vault {
             tree.is_valid_root(root)
         }
 
-        fn verify_deposit_proof(ref self: ContractState, proof: Span<felt252>) -> Result<Span<u256>, felt252> {
+        fn verify_deposit_proof(ref self: ContractState, proof: Span<felt252>) -> Span<u256> {
             let verifier = IVerifierDispatcher {
                 contract_address: self.deposit_verifier_address.read(),
             };
-            verifier.verify_ultra_keccak_zk_honk_proof(proof)
+            let result = verifier.verify_ultra_keccak_zk_honk_proof(proof);
+            assert(result.is_ok(), 'Deposit proof is invalid');
+            return result.unwrap();
         }
-        
-        fn verify_withdraw_proof(ref self: ContractState, proof: Span<felt252>) -> Result<Span<u256>, felt252> {
+
+        fn verify_withdraw_proof(ref self: ContractState, proof: Span<felt252>) -> Span<u256> {
             let verifier = IVerifierDispatcher {
                 contract_address: self.withdraw_verifier_address.read(),
             };
-            verifier.verify_ultra_keccak_zk_honk_proof(proof)
+            let result = verifier.verify_ultra_keccak_zk_honk_proof(proof);
+            assert(result.is_ok(), 'Withdraw proof is invalid');
+            return result.unwrap();
         }
+        
     }
 
 }

@@ -2,6 +2,8 @@ import { CairoCustomEnum } from 'starknet';
 import { LetheContracts, TransactionType } from "../types";
 import { getContractAddress } from "../utils";
 import { ChainClient } from "../ChainClient";
+import { ethers } from 'ethers';
+import { logger } from '../../logger';
 
 export class Vault {
     private contract: LetheContracts
@@ -31,4 +33,13 @@ export class Vault {
         }, TransactionType.READ);
     }
 
+    public deposit(proof: Uint8Array): ChainClient {
+        const proofBytes = ethers.hexlify(proof);
+        logger.info(`Depositing proof: ${proofBytes}`);
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "deposit",
+            calldata: [proofBytes]
+        }, TransactionType.WRITE);
+    }
 }

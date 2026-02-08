@@ -6,7 +6,7 @@
 		"deploy:mainnet": "ts-node scripts-ts/helpers/deploy-wrapper.ts --network mainnet",
 		"deploy:mainnet:upgrade": "ts-node scripts-ts/helpers/deploy-wrapper.ts --network mainnet --upgrade",
 		"deploy:mainnet:clear": "cd deployments && node clear.mjs $* && cd .. && ts-node scripts-ts/helpers/deploy-wrapper.ts --network mainnet",
-		"deploy:sepolia": "ts-node scripts-ts/helpers/deploy-wrapper.ts --network sepolia --feature mock_contracts",
+		"deploy:sepolia": "ts-node scripts-ts/helpers/deploy-wrapper.ts --network sepolia",
 		"deploy:sepolia:upgrade": "ts-node scripts-ts/helpers/deploy-wrapper.ts --network sepolia --upgrade",
 		"deploy:sepolia:clear": "cd deployments && node clear.mjs $* && cd .. && ts-node scripts-ts/helpers/deploy-wrapper.ts --network sepolia",
 		"deploy:no-reset": "snfoundry deploy --no-reset",

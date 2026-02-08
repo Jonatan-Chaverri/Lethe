@@ -10,7 +10,7 @@ fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
 fn main(
     secret: Field,
     nullifier: Field,
-    k_units: u64
+    k_units: pub u64
 ) -> pub Field {
     hash_commitment(secret, nullifier, k_units)
 }

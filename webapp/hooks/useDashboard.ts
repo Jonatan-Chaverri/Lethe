@@ -127,6 +127,7 @@ export function useDashboard() {
     try {
       const purchasableUnits = await getPurchasableUnits(amountUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
+      console.log("result of deposit proof", result);
       setDepositProof(result);
     } catch (error) {
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");

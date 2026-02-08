@@ -7,7 +7,7 @@ const deployedContracts = {
   sepolia: {
     MerkleTree: {
       address:
-        "0x30429d5589eaab5a25811193b2fc123085daedad1ff852e620c0e4b4e87d5d1",
+        "0x5f370495fb286fa04da441cf0bcb161e86e9ca3d476ba15816491f642419f9c",
       abi: [
         {
           type: "impl",
@@ -439,7 +439,7 @@ const deployedContracts = {
     },
     NullifierRegistry: {
       address:
-        "0x11ec5e2dba48608cfa22288abb4853feb96e34311f2ed5b34781e351789a497",
+        "0x29d8b3ec8f3c39cb1e5317a9cb77408f311f053e0d43dacb3ebf30339fc09f9",
       abi: [
         {
           type: "impl",
@@ -857,7 +857,7 @@ const deployedContracts = {
     },
     MockWBTC: {
       address:
-        "0x18f73823259c9e641dc86c834cc4cffb5abab5bdf49a701511251e8855f01f7",
+        "0x56c87e00d323d4f2f44a765c8c7273d30f98488ae4f95bb8d082e7684c6c98a",
       abi: [
         {
           type: "struct",
@@ -1666,7 +1666,7 @@ const deployedContracts = {
     },
     Vault: {
       address:
-        "0x305229c02a2943d978d63a401c48de260188b70e1e1cf372b8abfc6dc68d2b3",
+        "0x1b49febadc49c065db5e75c47f6b8aba62fb4901678174b19f09dff8db71c32",
       abi: [
         {
           type: "impl",
@@ -1718,16 +1718,8 @@ const deployedContracts = {
               name: "deposit",
               inputs: [
                 {
-                  name: "amount",
-                  type: "core::integer::u256",
-                },
-                {
                   name: "proof",
                   type: "core::array::Array::<core::felt252>",
-                },
-                {
-                  name: "commitment",
-                  type: "core::felt252",
                 },
               ],
               outputs: [],
@@ -2135,7 +2127,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x3169cd6126418fee2f6234bde2a9dfa2c355b8c71e0815aa26f94792f91aaf1",
+        "0x533225a1d9cae838daf6a4fdf7300ca3be1bc294ac7b35b16b1fafe0063ebde",
     },
     WBTC: {
       address:
