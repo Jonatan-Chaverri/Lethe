@@ -23,6 +23,12 @@ type WithdrawInputs = {
   w_units: number;
 };
 
+export type WithdrawMerklePath = {
+  path_elements: string[];
+  path_indices: boolean[];
+  root: string;
+};
+
 function toHex(data: Uint8Array): string {
   return `0x${Array.from(data)
     .map((value) => value.toString(16).padStart(2, "0"))
@@ -194,42 +200,27 @@ async function pedersenHash(
   return parsed;
 }
 
-async function buildWithdrawInputs(note?: CreatedDepositNote): Promise<WithdrawInputs> {
+async function buildWithdrawInputs(note: CreatedDepositNote, path: WithdrawMerklePath): Promise<WithdrawInputs> {
+  if (!note) {
+    throw new Error("Missing note for withdraw proof");
+  }
   const secret = BigInt(note?.secret ?? 1111);
   const nullifier = BigInt(note?.nullifier ?? 2222);
   const kUnits = note ? parseKUnits(note.k_units) : 10;
   const wUnits = Math.max(1, Math.min(4, kUnits));
   const newSecret = BigInt(3333);
   const newNullifier = BigInt(4444);
-  const depth = 20;
-
-  const pathElements = Array.from({ length: depth }, (_, i) => BigInt(i + 123));
-  const pathIndices = Array.from({ length: depth }, (_, i) => i % 2 === 1);
-
   const api = await getBbApi();
-
-  const commitment = await pedersenHash(api, [BigInt(0), secret, nullifier, BigInt(kUnits)]);
-  let hash = await pedersenHash(api, [BigInt(1), commitment]);
-
-  for (let i = 0; i < depth; i += 1) {
-    const sibling = pathElements[i];
-    const isRight = pathIndices[i];
-    const left = isRight ? sibling : hash;
-    const right = isRight ? hash : sibling;
-    hash = await pedersenHash(api, [BigInt(2), left, right]);
-  }
-
-  const root = hash;
   const nullifierHash = await pedersenHash(api, [nullifier]);
 
   return {
     secret: secret.toString(),
     nullifier: nullifier.toString(),
-    path_elements: pathElements.map((item) => item.toString()),
-    path_indices: pathIndices,
+    path_elements: path.path_elements,
+    path_indices: path.path_indices,
     new_secret: newSecret.toString(),
     new_nullifier: newNullifier.toString(),
-    root: root.toString(),
+    root: path.root,
     nullifier_hash: nullifierHash.toString(),
     k_units: kUnits,
     w_units: wUnits,
@@ -283,7 +274,7 @@ export async function generateDepositProof(amountUnits: number): Promise<Circuit
   };
 }
 
-export async function generateWithdrawProof(note?: CreatedDepositNote): Promise<CircuitProofResult> {
-  const inputs = await buildWithdrawInputs(note);
+export async function generateWithdrawProof(note: CreatedDepositNote, path: WithdrawMerklePath): Promise<CircuitProofResult> {
+  const inputs = await buildWithdrawInputs(note, path);
   return prove("withdraw", inputs);
 }

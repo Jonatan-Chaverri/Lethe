@@ -6,6 +6,9 @@ import { getZKHonkCallData, init } from "garaga";
 const DEFAULT_DEPOSIT_VK_PATH =
   process.env.DEPOSIT_VK_PATH ||
   resolve(process.cwd(), "./src/lib/Garaga/deposit/vk");
+const DEFAULT_WITHDRAW_VK_PATH =
+  process.env.WITHDRAW_VK_PATH ||
+  resolve(process.cwd(), "./src/lib/Garaga/withdraw/vk");
 let garagaInitPromise: Promise<unknown> | null = null;
 
 async function ensureGaragaReady(): Promise<void> {
@@ -94,6 +97,57 @@ export async function proofToDepositCalldata(
   }
 
   const vkPath = DEFAULT_DEPOSIT_VK_PATH;
+  const proofBytes = hexToBytes(proofHex);
+  const vkBytes = readFileSync(vkPath);
+  const publicInputsBytes = Buffer.concat(publicInputs.map(publicInputTo32Bytes));
+
+  logger.info(
+    `Using Garaga npm API with VK path: ${vkPath} (proof_bytes=${proofBytes.length}, public_inputs=${publicInputs.length}, public_input_bytes=${publicInputsBytes.length})`
+  );
+
+  if (proofBytes.length % 32 !== 0) {
+    throw new Error(
+      `Failed to convert proof to verifier calldata: proof byte length (${proofBytes.length}) is not a multiple of 32`
+    );
+  }
+
+  try {
+    await ensureGaragaReady();
+    const value = await getZKHonkCallData(proofBytes, publicInputsBytes, vkBytes);
+    return normalizeCalldata(value);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("AssertionError: 508 == 508 == 258")) {
+      throw new Error(
+        "Failed to convert proof to verifier calldata: received an EVM-formatted UltraHonk proof. " +
+          "Generate the proof with bb.js UltraHonk `keccakZK`/`starknetZK` options so Garaga can parse it."
+      );
+    }
+    if (message.includes("is not on the curve")) {
+      throw new Error(
+        `Failed to convert proof to verifier calldata: ${message}. ` +
+          `This usually means proof and VK are not from the same proof format/toolchain. ` +
+          `Generate proof with bb.js UltraHonk using keccakZK/starknetZK options, and regenerate/copy VK with the same bb version.`
+      );
+    }
+    throw new Error(`Failed to convert proof to verifier calldata: ${message}`);
+  }
+}
+
+
+export async function proofToWithdrawCalldata(
+  proofHex: string,
+  publicInputs: string[]
+): Promise<string[]> {
+  if (!proofHex || typeof proofHex !== "string") {
+    throw new Error("Missing or invalid proof hex");
+  }
+
+  if (!Array.isArray(publicInputs) || publicInputs.length === 0) {
+    throw new Error("Missing or invalid public inputs");
+  }
+
+  const vkPath = DEFAULT_WITHDRAW_VK_PATH;
   const proofBytes = hexToBytes(proofHex);
   const vkBytes = readFileSync(vkPath);
   const publicInputsBytes = Buffer.concat(publicInputs.map(publicInputTo32Bytes));

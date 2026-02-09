@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { connect } from "starknetkit";
-import { deposit, depositCallback, getPurchasableUnits } from "@/lib/api/userPositions";
+import { deposit, depositCallback, getMerklePath, getPurchasableUnits, withdraw } from "@/lib/api/userPositions";
 import {
   generateDepositProof,
   generateWithdrawProof,
@@ -178,9 +178,44 @@ export function useDashboardProofs({
 
     setActiveProof("withdraw");
     try {
-      const result = await generateWithdrawProof(selectedNote);
+      if (!Number.isInteger(selectedNote.leaf_index) || selectedNote.leaf_index < 0) {
+        throw new Error("This note does not have a valid leaf_index yet. Reload notes from file or try again.");
+      }
+
+      const merklePath = await getMerklePath(selectedNote.commitment, selectedNote.leaf_index);
+      console.log("merkle path", JSON.stringify(merklePath, null, 2));
+      console.log('selectedNote', JSON.stringify(selectedNote, null, 2));
+      const result = await generateWithdrawProof(selectedNote, {
+        path_elements: merklePath.path_elements,
+        path_indices: merklePath.path_indices,
+        root: merklePath.root,
+      });
+      console.log("withdraw proof result", result);
+      const transactionDetails = await withdraw(result.proofHex, result.publicInputs, 0);
+
+      const walletToUse = await resolveWallet();
+      if (!walletToUse) {
+        setProofError("Wallet not connected. Please connect your wallet to execute the withdraw.");
+        return;
+      }
+
+      await walletToUse.request({
+        type: "wallet_addInvokeTransaction",
+        params: {
+          calls: [
+            {
+              contract_address: transactionDetails.contract_address,
+              entry_point: transactionDetails.entrypoint,
+              calldata: transactionDetails.calldata ?? [],
+            },
+          ],
+        },
+      });
+
       setWithdrawProof(result);
+      await refetchUserPosition();
     } catch (error) {
+      console.log("withdraw proof error", error);
       setProofError(error instanceof Error ? error.message : "Failed to generate withdraw proof");
     } finally {
       setActiveProof(null);

@@ -1,22 +1,27 @@
 {
   "MerkleTree": {
     "classHash": "0x68f29629c1f53498241b0d3f42243c77c1fcd16fb1a15f3c423add581e6a00e",
-    "address": "0x1b27d4086e3036d784f2cfbcbe14fbef1f14283dd2fed77bd7c1c8de29ad5d0",
+    "address": "0x7f0155945a4e35b3de6a5becf5087d74ed3671da9117137d4c1d97c4a1fbaba",
     "contract": "MerkleTree"
   },
   "NullifierRegistry": {
     "classHash": "0xf05b4f9d76a0e9f51075a7f30440dcdefe28da6bdb8dc2dbf7b257abd39518",
-    "address": "0x146b8b573ca28f60a015600fcc00983eda0534ac2d99c315e7b08cbb2677d2d",
+    "address": "0x204b6903c7207898290a03b6fd6b79bf6ec5395d587b70398b760102706038f",
     "contract": "NullifierRegistry"
   },
   "MockWBTC": {
     "classHash": "0x7b75718243d127c3172ab0b8a18f3ddf520e0bbd3124479d70d43a1ce74db24",
-    "address": "0x7ecee3f38ae9f353189ca74b87117a1486194455f3b75d8872873c7f7e224ce",
+    "address": "0x6b8c27ab80a2ab193d189a17f5214aad9fc307a6a3f86bec3a2dda2970fe040",
     "contract": "MockWBTC"
   },
+  "lethe_withdraw_verifier_UltraKeccakZKHonkVerifier": {
+    "classHash": "0xf0e98e320e5b682ea41459d0e012286cf8f36a00017c055d2b386f147f8f3d",
+    "address": "0x58b3a9690898743f5a1d45491a6d879b7cee53aac59a62447bc4fe1e013d338",
+    "contract": "lethe_withdraw_verifier_UltraKeccakZKHonkVerifier"
+  },
   "Vault": {
-    "classHash": "0x2ebb8abf4419e89c459d1aca362f89e0c7e80e6e99abeaacfd193efd6624769",
-    "address": "0x5b595163cc0c0760022755b3668683aa467e9f09285b3356d78391e281219d5",
+    "classHash": "0x2cd882fd3fcfcd10e0fe3a683c479f6babe2517988cd8fc283cd26c1dd320c3",
+    "address": "0x78f689a2daa8e999e405c16cbb3b317002582dd924057f146bd9ca0248fe0ac",
     "contract": "Vault"
   }
 }

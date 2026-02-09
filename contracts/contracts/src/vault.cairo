@@ -148,10 +148,10 @@ mod Vault {
             let nullifier_hash_raw = *proof_result.at(1);
             let k_units = *proof_result.at(2);
             let w_units = *proof_result.at(3);
-            let new_commitment = *proof_result.at(5);
+            let new_commitment = *proof_result.at(4);
 
-            let root: felt252 = root_raw.try_into().unwrap();
-            let nullifier_hash: felt252 = nullifier_hash_raw.try_into().unwrap();
+            let root: felt252 = root_raw.low.into();
+            let nullifier_hash: felt252 = nullifier_hash_raw.low.into();
 
             assert(!self.is_nullifier_spent(nullifier_hash), 'Nullifier already spent');
             assert(self.is_valid_root(root), 'Invalid root');

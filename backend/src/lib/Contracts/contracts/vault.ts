@@ -57,4 +57,14 @@ export class Vault {
             calldata: feltHexCalldata
         }, TransactionType.WRITE);
     }
+
+    public withdraw(proofCalldata: string[], recipient: string): ChainClient {
+        const feltHexCalldata = arrayToFeltHex(proofCalldata);
+        feltHexCalldata.push(recipient);
+        return new ChainClient(this.network, {
+            contract_address: this.contractAddress,
+            entrypoint: "withdraw",
+            calldata: feltHexCalldata
+        }, TransactionType.WRITE);
+    }
 }

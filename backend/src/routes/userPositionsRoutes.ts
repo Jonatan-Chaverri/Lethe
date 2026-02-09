@@ -3,8 +3,8 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { successResponse } from "../utils/formatting";
 import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
-import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice } from "@/services/onchain/onChainVaultService";
-import { proofToDepositCalldata } from "@/services/onchain/garagaCalldataService";
+import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice, withdraw } from "@/services/onchain/onChainVaultService";
+import { proofToDepositCalldata, proofToWithdrawCalldata } from "@/services/onchain/garagaCalldataService";
 import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 import { logger } from "@/lib/logger";
 import { BTC_ATOMS, UNIT_ATOMS } from "@/lib/Contracts";
@@ -78,4 +78,14 @@ userPositionsRoutes.post("/merkle/path", async (req, res) => {
     };
     const path = await merklePathService.buildPath(commitment, leaf_index);
     successResponse(res, path);
+});
+
+userPositionsRoutes.post("/withdraw", authMiddleware, async (req, res) => {
+    const { id, wallet } = req.user!;
+    const { proof, publicInputs, amount_btc } = req.body as { 
+        proof: string; publicInputs: string[]; amount_btc: number 
+    };
+    const proofCalldata = await proofToWithdrawCalldata(proof, publicInputs);
+    const withdrawTransaction = await withdraw(proofCalldata, wallet);
+    successResponse(res, withdrawTransaction.getTransactionDetails());
 });

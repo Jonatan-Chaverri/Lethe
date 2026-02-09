@@ -27,6 +27,10 @@ export async function deposit(proofCalldata: string[]): Promise<ChainClient> {
     return vaultService.deposit(proofCalldata);
 }
 
+export async function withdraw(proofCalldata: string[], recipient: string): Promise<ChainClient> {
+    return vaultService.withdraw(proofCalldata, recipient);
+}
+
 export async function getDepositEvents(transactionHash: string): Promise<DepositEvent> {
     const events = await chainEventsClient.getTransactionEvents(transactionHash);
     return events.getDepositEvents();

@@ -9,13 +9,16 @@ fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
 }
 
 fn hash_leaf(commitment: Field) -> Field {
-    let input: [Field; 2] = [DOMAIN_LEAF, commitment];
-    dep::std::hash::pedersen_hash(input)
+    let (commitment_low, commitment_high) = dep::std::field::bn254::decompose(commitment);
+    let state: [Field; 4] = [DOMAIN_LEAF, commitment_low, commitment_high, 0];
+    let output = dep::std::hash::poseidon2_permutation(state, 4);
+    output[0]
 }
 
 fn hash_node(left: Field, right: Field) -> Field {
-    let input: [Field; 3] = [DOMAIN_NODE, left, right];
-    dep::std::hash::pedersen_hash(input)
+    let state: [Field; 4] = [DOMAIN_NODE, left, right, 0];
+    let output = dep::std::hash::poseidon2_permutation(state, 4);
+    output[0]
 }
 
 fn compute_root(leaf: Field, path_elements: [Field; DEPTH], path_indices: [bool; DEPTH]) -> Field {

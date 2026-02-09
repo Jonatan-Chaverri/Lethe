@@ -19,6 +19,14 @@ export type DepositCallbackResponse = {
   leaf_index: number | null;
 };
 
+export type MerklePathResponse = {
+  commitment: string;
+  leaf_index: number;
+  path_elements: string[];
+  path_indices: boolean[];
+  root: string;
+};
+
 /**
  * Fetches the connected wallet's WBTC balance.
  * @returns Balance as string in wei/smallest units. Use a formatting util for human-readable WBTC.
@@ -46,6 +54,14 @@ export async function deposit(proof: string, publicInputs: string[], amount_btc:
   return envelope.data;
 }
 
+export async function withdraw(proof: string, publicInputs: string[], amount_btc = 0): Promise<TransactionDetails> {
+  const envelope = await apiRequest<ApiEnvelope<TransactionDetails>>("/api/user-positions/withdraw", {
+    method: "POST",
+    body: { proof, publicInputs, amount_btc },
+  });
+  return envelope.data;
+}
+
 export async function depositCallback(
   transaction_hash: string,
   deposit_units: number
@@ -53,6 +69,14 @@ export async function depositCallback(
   const envelope = await apiRequest<ApiEnvelope<DepositCallbackResponse>>("/api/user-positions/deposit/callback", {
     method: "POST",
     body: { transaction_hash, deposit_units },
+  });
+  return envelope.data;
+}
+
+export async function getMerklePath(commitment: string, leaf_index: number): Promise<MerklePathResponse> {
+  const envelope = await apiRequest<ApiEnvelope<MerklePathResponse>>("/api/user-positions/merkle/path", {
+    method: "POST",
+    body: { commitment, leaf_index },
   });
   return envelope.data;
 }

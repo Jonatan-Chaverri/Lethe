@@ -1,0 +1,10 @@
+k_units = ""
+new_nullifier = ""
+new_secret = ""
+nullifier = ""
+nullifier_hash = ""
+path_elements = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+path_indices = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+root = ""
+secret = ""
+w_units = ""
