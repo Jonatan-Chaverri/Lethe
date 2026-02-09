@@ -10,12 +10,7 @@ pub trait IVault<ContractState> {
     fn withdraw(
         ref self: ContractState,
         proof: Array<felt252>,
-        root: felt252,
-        nullifier_hash: felt252,
-        k_units: u256,
-        w_units: u256,
         recipient: ContractAddress,
-        new_commitment: u256
     );
 }
 
@@ -125,7 +120,6 @@ mod Vault {
 
         fn deposit(ref self: ContractState, proof: Array<felt252>) {
             let mut total_shares_in_k_units = self.total_shares.read();
-            let total_assets = self.get_total_assets();
 
             let proof_result = self.verify_deposit_proof(proof.span());
             let commitment = *proof_result.at(1);
@@ -147,29 +141,30 @@ mod Vault {
         fn withdraw(
             ref self: ContractState,
             proof: Array<felt252>,
-            root: felt252,
-            nullifier_hash: felt252,
-            k_units: u256,
-            w_units: u256,
             recipient: ContractAddress,
-            new_commitment: u256
         ) {
+            let proof_result = self.verify_withdraw_proof(proof.span());
+            let root_raw = *proof_result.at(0);
+            let nullifier_hash_raw = *proof_result.at(1);
+            let k_units = *proof_result.at(2);
+            let w_units = *proof_result.at(3);
+            let new_commitment = *proof_result.at(5);
+
+            let root: felt252 = root_raw.try_into().unwrap();
+            let nullifier_hash: felt252 = nullifier_hash_raw.try_into().unwrap();
+
             assert(!self.is_nullifier_spent(nullifier_hash), 'Nullifier already spent');
             assert(self.is_valid_root(root), 'Invalid root');
             assert(w_units > 0, 'w units less than 0');
 
-            let proof_result = self.verify_withdraw_proof(proof.span());
-
             self.mark_nullifier_as_spent(nullifier_hash);
 
-            let total_shares = self.total_shares.read();
-            let total_assets = self.get_total_assets();
+            let total_shares_in_k_units = self.total_shares.read();
 
-            let shares_to_withdraw: u256 = w_units * UNIT_ATOMS;
-            assert(shares_to_withdraw <= total_shares, 'Not enough shares to withdraw');
-            let payout = (shares_to_withdraw * total_assets) / total_shares;
+            assert(w_units <= total_shares_in_k_units, 'Not enough shares to withdraw');
+            let payout = self._k_units_price(w_units);
 
-            self.total_shares.write(total_shares - shares_to_withdraw);
+            self.total_shares.write(total_shares_in_k_units - w_units);
 
             self.wbtc_contract.read().transfer(
                 recipient, payout
@@ -179,9 +174,6 @@ mod Vault {
                 // Mint a new commitment for the remaining shares
                 self.insert_commitment(new_commitment);
             }
-
-            assert(shares_to_withdraw > 0, 'shares is less than 0');
-            
         }
     }
 

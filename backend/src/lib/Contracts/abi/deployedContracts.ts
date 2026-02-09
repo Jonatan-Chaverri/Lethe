@@ -7,7 +7,7 @@ const deployedContracts = {
   sepolia: {
     MerkleTree: {
       address:
-        "0x161cfb614dc89797df041276e3f910beec3b2b2fcdf2c60b7cccb1225319987",
+        "0x1b27d4086e3036d784f2cfbcbe14fbef1f14283dd2fed77bd7c1c8de29ad5d0",
       abi: [
         {
           type: "impl",
@@ -453,7 +453,7 @@ const deployedContracts = {
     },
     NullifierRegistry: {
       address:
-        "0x3ce0bd3e26a3e656ae8d47e151fb4560ab03f28e6ae3ee1d05dda08e4cd25a",
+        "0x146b8b573ca28f60a015600fcc00983eda0534ac2d99c315e7b08cbb2677d2d",
       abi: [
         {
           type: "impl",
@@ -871,7 +871,7 @@ const deployedContracts = {
     },
     MockWBTC: {
       address:
-        "0x7b9db5c900cf81495f307bbf1df68d3a0c4ce94ba2af6b2c4effb541066af23",
+        "0x7ecee3f38ae9f353189ca74b87117a1486194455f3b75d8872873c7f7e224ce",
       abi: [
         {
           type: "struct",
@@ -1680,7 +1680,7 @@ const deployedContracts = {
     },
     Vault: {
       address:
-        "0x1d349ec9d628fd94a610edfe206748b675b2ce032b310e9f058934b48ff7d69",
+        "0x5b595163cc0c0760022755b3668683aa467e9f09285b3356d78391e281219d5",
       abi: [
         {
           type: "impl",
@@ -1780,28 +1780,8 @@ const deployedContracts = {
                   type: "core::array::Array::<core::felt252>",
                 },
                 {
-                  name: "root",
-                  type: "core::felt252",
-                },
-                {
-                  name: "nullifier_hash",
-                  type: "core::felt252",
-                },
-                {
-                  name: "k_units",
-                  type: "core::integer::u256",
-                },
-                {
-                  name: "w_units",
-                  type: "core::integer::u256",
-                },
-                {
                   name: "recipient",
                   type: "core::starknet::contract_address::ContractAddress",
-                },
-                {
-                  name: "new_commitment",
-                  type: "core::integer::u256",
                 },
               ],
               outputs: [],
@@ -2173,7 +2153,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x3457370710f6a16ccd7e1f430953ea5259a7c06714ec662760c9de2963d6c3d",
+        "0x2ebb8abf4419e89c459d1aca362f89e0c7e80e6e99abeaacfd193efd6624769",
     },
     WBTC: {
       address:

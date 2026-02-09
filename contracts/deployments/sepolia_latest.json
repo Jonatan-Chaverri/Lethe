@@ -1,22 +1,22 @@
 {
   "MerkleTree": {
     "classHash": "0x68f29629c1f53498241b0d3f42243c77c1fcd16fb1a15f3c423add581e6a00e",
-    "address": "0x161cfb614dc89797df041276e3f910beec3b2b2fcdf2c60b7cccb1225319987",
+    "address": "0x1b27d4086e3036d784f2cfbcbe14fbef1f14283dd2fed77bd7c1c8de29ad5d0",
     "contract": "MerkleTree"
   },
   "NullifierRegistry": {
     "classHash": "0xf05b4f9d76a0e9f51075a7f30440dcdefe28da6bdb8dc2dbf7b257abd39518",
-    "address": "0x3ce0bd3e26a3e656ae8d47e151fb4560ab03f28e6ae3ee1d05dda08e4cd25a",
+    "address": "0x146b8b573ca28f60a015600fcc00983eda0534ac2d99c315e7b08cbb2677d2d",
     "contract": "NullifierRegistry"
   },
   "MockWBTC": {
     "classHash": "0x7b75718243d127c3172ab0b8a18f3ddf520e0bbd3124479d70d43a1ce74db24",
-    "address": "0x7b9db5c900cf81495f307bbf1df68d3a0c4ce94ba2af6b2c4effb541066af23",
+    "address": "0x7ecee3f38ae9f353189ca74b87117a1486194455f3b75d8872873c7f7e224ce",
     "contract": "MockWBTC"
   },
   "Vault": {
-    "classHash": "0x3457370710f6a16ccd7e1f430953ea5259a7c06714ec662760c9de2963d6c3d",
-    "address": "0x1d349ec9d628fd94a610edfe206748b675b2ce032b310e9f058934b48ff7d69",
+    "classHash": "0x2ebb8abf4419e89c459d1aca362f89e0c7e80e6e99abeaacfd193efd6624769",
+    "address": "0x5b595163cc0c0760022755b3668683aa467e9f09285b3356d78391e281219d5",
     "contract": "Vault"
   }
 }
