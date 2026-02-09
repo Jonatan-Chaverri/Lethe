@@ -3,13 +3,14 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IMerkleTree<ContractState> {
     fn set_vault_address(ref self: ContractState, vault: ContractAddress);
-    fn is_valid_root(ref self: ContractState, root: felt252) -> bool;
-    fn insert(ref self: ContractState, commitment: u256) -> felt252;
+    fn is_valid_root(ref self: ContractState, root: u256) -> bool;
+    fn insert(ref self: ContractState, commitment: u256) -> u256;
 }
 
 
 #[starknet::contract]
 mod MerkleTree {
+    use garaga::hashes::poseidon_bn254::poseidon_hash_2;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::upgrades::UpgradeableComponent;
@@ -43,8 +44,8 @@ mod MerkleTree {
     const MAX_LEAVES: u64 = 1048576;
     const MAX_ROOTS: u64 = 10;
 
-    const DOMAIN_LEAF: felt252 = 1;
-    const DOMAIN_NODE: felt252 = 2;
+    const DOMAIN_LEAF: u256 = u256 { low: 1, high: 0 };
+    const DOMAIN_NODE: u256 = u256 { low: 2, high: 0 };
 
     #[storage]
     struct Storage {
@@ -55,10 +56,10 @@ mod MerkleTree {
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         next_leaf_index: u64,
-        current_root: felt252,
-        filled_subtrees: Map<u64, felt252>,
-        zero_hashes: Map<u64, felt252>,
-        valid_roots: Map<u64, felt252>,
+        current_root: u256,
+        filled_subtrees: Map<u64, u256>,
+        zero_hashes: Map<u64, u256>,
+        valid_roots: Map<u64, u256>,
         rotation: u64,
         vault_address: ContractAddress,
     }
@@ -80,7 +81,7 @@ mod MerkleTree {
     struct CommitmentInserted {
         commitment: u256,
         leaf_index: u64,
-        new_root: felt252
+        new_root: u256
     }
 
     #[constructor]
@@ -98,7 +99,7 @@ mod MerkleTree {
             self.vault_address.write(vault);
         }
 
-        fn is_valid_root(ref self: ContractState, root: felt252) -> bool {
+        fn is_valid_root(ref self: ContractState, root: u256) -> bool {
             if self.current_root.read() == root {
                 return true;
             }
@@ -110,7 +111,7 @@ mod MerkleTree {
             false
         }
 
-        fn insert(ref self: ContractState, commitment: u256) -> felt252 {
+        fn insert(ref self: ContractState, commitment: u256) -> u256 {
             assert(self.vault_address.read() == get_caller_address(), 'Caller is not vault');
             let mut index = self.next_leaf_index.read();
             assert(index < MAX_LEAVES, 'Index out of bounds');
@@ -120,8 +121,8 @@ mod MerkleTree {
             let mut hash = self.hash_leaf(commitment);
 
             for level in 0..DEPTH {
-                let mut left: felt252 = 0;
-                let mut right: felt252 = 0;
+                let mut left: u256 = u256 { low: 0, high: 0 };
+                let mut right: u256 = u256 { low: 0, high: 0 };
 
                 if index % 2 == 0 {
                     left = hash;
@@ -176,16 +177,14 @@ mod MerkleTree {
             }
         }
 
-        fn hash_leaf(self: @ContractState, commitment: u256) -> felt252 {
-            core::poseidon::poseidon_hash_span(
-                [DOMAIN_LEAF, commitment.low.into(), commitment.high.into()].span()
-            )
+        fn hash_leaf(self: @ContractState, commitment: u256) -> u256 {
+            let h0 = poseidon_hash_2(DOMAIN_LEAF, u256 { low: commitment.low, high: 0 });
+            poseidon_hash_2(h0, u256 { low: commitment.high, high: 0 })
         }
 
-        fn hash_node(self: @ContractState, left: felt252, right: felt252) -> felt252 {
-            core::poseidon::poseidon_hash_span(
-                [DOMAIN_NODE, left, right].span()
-            )
+        fn hash_node(self: @ContractState, left: u256, right: u256) -> u256 {
+            let h0 = poseidon_hash_2(DOMAIN_NODE, left);
+            poseidon_hash_2(h0, right)
         }
     }
 }

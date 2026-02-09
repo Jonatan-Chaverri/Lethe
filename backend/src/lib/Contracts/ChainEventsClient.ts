@@ -1,4 +1,4 @@
-import { Event, RpcProvider, uint256 } from "starknet";
+import { Event, logger, RpcProvider, uint256 } from "starknet";
 
 import { HttpError } from "@/lib/httpError";
 import { 
@@ -51,10 +51,14 @@ class EventsParser {
                 transferEvents.push(transferEvent);
             }
             else if (event.keys[0] === COMMITMENT_INSERTED_EVENT_SELECTOR) {
+                const newRoot =
+                    event.data.length >= 5
+                        ? String(uint256.uint256ToBN({ low: event.data[3], high: event.data[4] }))
+                        : String(event.data[3]);
                 const commitmentInsertedEvent = {
                     commitment: String(uint256.uint256ToBN({low: event.data[0], high: event.data[1]})),
                     leaf_index: Number(event.data[2]),
-                    new_root: String(event.data[3]),
+                    new_root: newRoot,
                 }
                 commitmentInsertedEvents.push(commitmentInsertedEvent);
             }

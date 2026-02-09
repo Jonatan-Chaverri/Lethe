@@ -9,6 +9,8 @@ import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 import { logger } from "@/lib/logger";
 import { BTC_ATOMS, UNIT_ATOMS } from "@/lib/Contracts";
 import { MerklePathService } from "@/services/merklePathService";
+import { getEvents } from "@/services/onchain/onChainVaultService";
+import { HttpError } from "@/lib/httpError";
 
 export const userPositionsRoutes = Router();
 
@@ -19,12 +21,9 @@ userPositionsRoutes.get("/getCurrentPosition", authMiddleware, async (req, res) 
     const { id } = req.user!;
     const userPosition = await userPositionsService.getUserPosition(id);
     const sharePrice = await getSharePrice();
-    logger.info(`Share price for user ${id} is ${sharePrice}`);
     const totalShares = userPosition?.total_active_shares ?? 0;
     const totalAssets = sharePrice * BigInt(totalShares) * UNIT_ATOMS / BTC_ATOMS;
     const totalYield = totalAssets - BigInt(userPosition?.total_deposited_btc ?? 0);
-    logger.info(`Total assets for user ${id} is ${totalAssets}`);
-    logger.info(`Total yield for user ${id} is ${totalYield}`);
     const result = {
         current_balance: weiToWbtc(totalAssets),
         total_yield: weiToWbtc(totalYield),
@@ -58,6 +57,9 @@ userPositionsRoutes.post("/deposit/callback", authMiddleware, async (req, res) =
     const { transaction_hash, deposit_units } = req.body as { transaction_hash: string, deposit_units: number, share_price: number };
     logger.info(`Deposit callback received for transaction ${transaction_hash} with ${deposit_units} units`);
     const events = await getDepositEvents(transaction_hash);
+    if (!events || events.commitment_inserted.length === 0) {
+        throw new HttpError(400, "No commitment inserted in transaction", "NO_COMMITMENT_INSERTED");
+    }
     const sharePrice = await getSharePrice();
     await userPositionsService.registerUserDeposit(id, wallet, deposit_units, Number(sharePrice), events);
     const insertedCommitment = events.commitment_inserted[0];
@@ -88,4 +90,10 @@ userPositionsRoutes.post("/withdraw", authMiddleware, async (req, res) => {
     const proofCalldata = await proofToWithdrawCalldata(proof, publicInputs);
     const withdrawTransaction = await withdraw(proofCalldata, wallet);
     successResponse(res, withdrawTransaction.getTransactionDetails());
+});
+
+userPositionsRoutes.post("/events", async (req, res) => {
+    const { transaction_hash } = req.body as { transaction_hash: string };
+    const events = await getEvents(transaction_hash);
+    successResponse(res, events.getEvents());
 });

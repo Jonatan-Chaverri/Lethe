@@ -125,6 +125,8 @@ export function useDashboardProofs({
       const result = await generateDepositProof(Number(purchasableUnits));
       const transactionDetails = await deposit(result.proofHex, result.publicInputs, amountUnits);
 
+      console.log("transaction details", JSON.stringify(transactionDetails, null, 2));
+
       const walletToUse = await resolveWallet();
       if (!walletToUse) {
         setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");

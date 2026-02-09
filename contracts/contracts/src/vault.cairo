@@ -150,11 +150,10 @@ mod Vault {
             let w_units = *proof_result.at(3);
             let new_commitment = *proof_result.at(4);
 
-            let root: felt252 = root_raw.low.into();
             let nullifier_hash: felt252 = nullifier_hash_raw.low.into();
 
             assert(!self.is_nullifier_spent(nullifier_hash), 'Nullifier already spent');
-            assert(self.is_valid_root(root), 'Invalid root');
+            assert(self.is_valid_root(root_raw), 'Invalid root');
             assert(w_units > 0, 'w units less than 0');
 
             self.mark_nullifier_as_spent(nullifier_hash);
@@ -236,7 +235,7 @@ mod Vault {
             nullifier_registry.mark_as_spent(nullifier_hash);
         }
 
-        fn is_valid_root(ref self: ContractState, root: felt252) -> bool {
+        fn is_valid_root(ref self: ContractState, root: u256) -> bool {
             let mut tree = IMerkleTreeDispatcher {
                 contract_address: self.tree_address.read(),
             };

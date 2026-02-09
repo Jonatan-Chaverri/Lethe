@@ -1,13 +1,13 @@
-import { hash } from "starknet";
+import { init, poseidonHashBN254 } from "garaga";
 import { HttpError } from "@/lib/httpError";
 import { merkleLeavesDbService } from "@/services/db/merkleLeavesDbService";
 import { merkleRootsDbService } from "@/services/db/merkleRootsDbService";
-import { logger } from "@/lib/logger";
 
 const TREE_DEPTH = 20;
 const DOMAIN_LEAF = 1n;
 const DOMAIN_NODE = 2n;
 const U128_MASK = (1n << 128n) - 1n;
+let garagaInitPromise: Promise<unknown> | null = null;
 
 export interface MerklePathResult {
   commitment: string;
@@ -23,19 +23,25 @@ function toBigIntValue(value: string | number | bigint): bigint {
   return value.startsWith("0x") || value.startsWith("0X") ? BigInt(value) : BigInt(value);
 }
 
-function poseidonHash(elements: bigint[]): bigint {
-  const result = hash.computePoseidonHashOnElements(elements.map((item) => item.toString()));
-  return toBigIntValue(result);
+async function ensureGaragaInit(): Promise<void> {
+  if (!garagaInitPromise) {
+    garagaInitPromise = Promise.resolve(init());
+  }
+  await garagaInitPromise;
+}
+
+function hash2(left: bigint, right: bigint): bigint {
+  return poseidonHashBN254(left, right);
 }
 
 function hashLeaf(commitment: bigint): bigint {
   const low = commitment & U128_MASK;
   const high = commitment >> 128n;
-  return poseidonHash([DOMAIN_LEAF, low, high]);
+  return hash2(hash2(DOMAIN_LEAF, low), high);
 }
 
 function hashNode(left: bigint, right: bigint): bigint {
-  return poseidonHash([DOMAIN_NODE, left, right]);
+  return hash2(hash2(DOMAIN_NODE, left), right);
 }
 
 function buildZeroHashes(): bigint[] {
@@ -49,6 +55,7 @@ function buildZeroHashes(): bigint[] {
 
 export class MerklePathService {
   async buildPath(commitment: string, leafIndex: number): Promise<MerklePathResult> {
+    await ensureGaragaInit();
     if (!Number.isInteger(leafIndex) || leafIndex < 0) {
       throw new HttpError(400, "leaf_index must be a non-negative integer");
     }

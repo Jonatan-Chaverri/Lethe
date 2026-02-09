@@ -7,26 +7,12 @@ const deployedContracts = {
   sepolia: {
     MerkleTree: {
       address:
-        "0x7f0155945a4e35b3de6a5becf5087d74ed3671da9117137d4c1d97c4a1fbaba",
+        "0x6a6a207d99d0e4b53cb41cbe3335f8c2ba43f8fd464e08cab06dee221c26a0a",
       abi: [
         {
           type: "impl",
           name: "MerkleTreeImpl",
           interface_name: "contracts::merkle_tree::IMerkleTree",
-        },
-        {
-          type: "enum",
-          name: "core::bool",
-          variants: [
-            {
-              name: "False",
-              type: "()",
-            },
-            {
-              name: "True",
-              type: "()",
-            },
-          ],
         },
         {
           type: "struct",
@@ -39,6 +25,20 @@ const deployedContracts = {
             {
               name: "high",
               type: "core::integer::u128",
+            },
+          ],
+        },
+        {
+          type: "enum",
+          name: "core::bool",
+          variants: [
+            {
+              name: "False",
+              type: "()",
+            },
+            {
+              name: "True",
+              type: "()",
             },
           ],
         },
@@ -64,7 +64,7 @@ const deployedContracts = {
               inputs: [
                 {
                   name: "root",
-                  type: "core::felt252",
+                  type: "core::integer::u256",
                 },
               ],
               outputs: [
@@ -85,7 +85,7 @@ const deployedContracts = {
               ],
               outputs: [
                 {
-                  type: "core::felt252",
+                  type: "core::integer::u256",
                 },
               ],
               state_mutability: "external",
@@ -415,7 +415,7 @@ const deployedContracts = {
             },
             {
               name: "new_root",
-              type: "core::felt252",
+              type: "core::integer::u256",
               kind: "data",
             },
           ],
@@ -449,11 +449,11 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x68f29629c1f53498241b0d3f42243c77c1fcd16fb1a15f3c423add581e6a00e",
+        "0x1762aec5f31223843848f6f27b138f55aae4d556df581b349299bdc687c3562",
     },
     NullifierRegistry: {
       address:
-        "0x204b6903c7207898290a03b6fd6b79bf6ec5395d587b70398b760102706038f",
+        "0x7acaf795e61abb4301c6ae6fb9e9d62d79a80a7afb6d03c3056efc38a45ebb0",
       abi: [
         {
           type: "impl",
@@ -871,7 +871,7 @@ const deployedContracts = {
     },
     MockWBTC: {
       address:
-        "0x6b8c27ab80a2ab193d189a17f5214aad9fc307a6a3f86bec3a2dda2970fe040",
+        "0x6be025876fe8821a297011407dcc9bd1fbb8b1207d110d7832e037fb56e8d3c",
       abi: [
         {
           type: "struct",
@@ -1680,7 +1680,7 @@ const deployedContracts = {
     },
     Vault: {
       address:
-        "0x78f689a2daa8e999e405c16cbb3b317002582dd924057f146bd9ca0248fe0ac",
+        "0x6bf94a427fcec1611b5029bdd5dc7d29b7bfc3cece9034972ce4e344e1675c0",
       abi: [
         {
           type: "impl",
@@ -2153,7 +2153,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x2cd882fd3fcfcd10e0fe3a683c479f6babe2517988cd8fc283cd26c1dd320c3",
+        "0x28580046ab3329d57fc798b6344232cf7740fcf643d9bb0f6d4072727a0f7b2",
     },
     WBTC: {
       address:

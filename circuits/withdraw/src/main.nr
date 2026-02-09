@@ -1,3 +1,5 @@
+use poseidon::poseidon::bn254::hash_2;
+
 global DOMAIN_COMMITMENT: Field = 0;
 global DOMAIN_LEAF: Field = 1;
 global DOMAIN_NODE: Field = 2;
@@ -10,15 +12,13 @@ fn hash_commitment(secret: Field, nullifier: Field, k_units: u64) -> Field {
 
 fn hash_leaf(commitment: Field) -> Field {
     let (commitment_low, commitment_high) = dep::std::field::bn254::decompose(commitment);
-    let state: [Field; 4] = [DOMAIN_LEAF, commitment_low, commitment_high, 0];
-    let output = dep::std::hash::poseidon2_permutation(state, 4);
-    output[0]
+    let h0 = hash_2([DOMAIN_LEAF, commitment_low]);
+    hash_2([h0, commitment_high])
 }
 
 fn hash_node(left: Field, right: Field) -> Field {
-    let state: [Field; 4] = [DOMAIN_NODE, left, right, 0];
-    let output = dep::std::hash::poseidon2_permutation(state, 4);
-    output[0]
+    let h0 = hash_2([DOMAIN_NODE, left]);
+    hash_2([h0, right])
 }
 
 fn compute_root(leaf: Field, path_elements: [Field; DEPTH], path_indices: [bool; DEPTH]) -> Field {

@@ -35,3 +35,7 @@ export async function getDepositEvents(transactionHash: string): Promise<Deposit
     const events = await chainEventsClient.getTransactionEvents(transactionHash);
     return events.getDepositEvents();
 }
+
+export async function getEvents(transactionHash: string) {
+    return chainEventsClient.getTransactionEvents(transactionHash);
+}
