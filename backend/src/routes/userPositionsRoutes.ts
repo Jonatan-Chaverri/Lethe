@@ -58,5 +58,13 @@ userPositionsRoutes.post("/deposit/callback", authMiddleware, async (req, res) =
     const events = await getDepositEvents(transaction_hash);
     const sharePrice = await getSharePrice();
     await userPositionsService.registerUserDeposit(id, wallet, deposit_units, Number(sharePrice), events);
-    successResponse(res, events, "Deposit callback received successfully");
+    const insertedCommitment = events.commitment_inserted[0];
+    successResponse(
+        res,
+        {
+            commitment: insertedCommitment?.commitment ?? null,
+            leaf_index: insertedCommitment?.leaf_index ?? null,
+        },
+        "Deposit callback received successfully"
+    );
 });

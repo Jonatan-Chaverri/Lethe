@@ -6,30 +6,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
-import { deposit, depositCallback, getPurchasableUnits } from "@/lib/api/userPositions";
+import { useDashboardNotes } from "@/hooks/dashboard/useDashboardNotes";
 import {
-  generateDepositProof,
-  generateWithdrawProof,
-  WBTC_UNITS_PER_BTC,
-  type CircuitProofResult,
-} from "@/lib/noir/proofService";
-import { connect } from "starknetkit";
+  MIN_DEPOSIT_BTC,
+  MIN_WITHDRAW_BTC,
+  useDashboardProofs,
+} from "@/hooks/dashboard/useDashboardProofs";
 
-export const MIN_DEPOSIT_BTC = 0.001;
-export const MIN_WITHDRAW_BTC = 0.001;
-
-function btcToUnits(btcStr: string): number {
-  const n = parseFloat(btcStr);
-  if (!Number.isFinite(n) || n < 0) return 0;
-  return Math.round(n * WBTC_UNITS_PER_BTC);
-}
+export { MIN_DEPOSIT_BTC, MIN_WITHDRAW_BTC };
 
 export function useDashboard() {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
   const { address, wallet, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
+
   const {
     currentBalanceDisplay,
     totalYieldDisplay,
@@ -37,6 +30,7 @@ export function useDashboard() {
     error: positionError,
     refetch: refetchUserPosition,
   } = useUserPosition(isAuthenticated);
+
   const {
     balanceDisplay: wbtcBalanceDisplay,
     isLoadingBalance: isLoadingWBTC,
@@ -47,16 +41,28 @@ export function useDashboard() {
     mintError: wbtcMintError,
   } = useWBTC(isAuthenticated);
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [depositProof, setDepositProof] = useState<CircuitProofResult | null>(null);
-  const [withdrawProof, setWithdrawProof] = useState<CircuitProofResult | null>(null);
-  const [proofError, setProofError] = useState<string | null>(null);
-  const [activeProof, setActiveProof] = useState<"deposit" | "withdraw" | null>(null);
-  const [depositAmountOpen, setDepositAmountOpen] = useState(false);
-  const [depositAmountInput, setDepositAmountInput] = useState("");
-  const [depositAmountError, setDepositAmountError] = useState<string | null>(null);
-  /** "pending" = wait modal, "success" = success message then auto-close */
-  const [depositModalStatus, setDepositModalStatus] = useState<"pending" | "success" | null>(null);
+  const notes = useDashboardNotes();
+
+  const proofs = useDashboardProofs({
+    wallet,
+    connectWalletWithoutSignature,
+    refetchUserPosition,
+    getSelectedWithdrawNote: () => notes.selectedNote,
+    onDepositNoteGenerated: (note) => {
+      notes.addOrUpdateNote(note);
+      void notes.persistUsingCurrentPassword();
+    },
+    onDepositLeafIndexResolved: (commitment, leafIndex) => {
+      notes.applyLeafIndex(commitment, leafIndex);
+      void notes.persistUsingCurrentPassword();
+    },
+    onOpenDownloadModal: () => {
+      if (!notes.hasNotesPassword) {
+        notes.handleOpenDownloadNote();
+      }
+    },
+    onBeforeDepositStart: notes.clearNotesStatus,
+  });
 
   const walletAddress = address ?? user?.wallet ?? null;
 
@@ -97,114 +103,9 @@ export function useDashboard() {
     };
   }, [menuOpen]);
 
-  const handleOpenDepositAmount = () => {
-    setDepositAmountError(null);
-    setDepositAmountInput("");
-    setDepositAmountOpen(true);
-  };
-
-  const handleCloseDepositAmount = () => {
-    setDepositAmountOpen(false);
-    setDepositAmountError(null);
-  };
-
-  const trySilentConnect = async () => {
-    try {
-      const { wallet, connectorData } = await connect({ modalMode: "neverAsk" })
-      return wallet && connectorData?.account ? { wallet, connectorData } : null
-    } catch {
-      return null
-    }
-  }
-
-  const handleConfirmDepositAmount = async () => {
-    setDepositAmountError(null);
-    const trimmed = depositAmountInput.trim();
-    if (!trimmed) {
-      setDepositAmountError("Enter an amount in BTC");
-      return;
-    }
-    const amountBtc = parseFloat(trimmed);
-    if (!Number.isFinite(amountBtc) || amountBtc < MIN_DEPOSIT_BTC) {
-      setDepositAmountError(`Minimum deposit is ${MIN_DEPOSIT_BTC.toFixed(3)} BTC`);
-      return;
-    }
-    const amountUnits = btcToUnits(trimmed);
-    if (amountUnits <= 0) {
-      setDepositAmountError("Amount is too small");
-      return;
-    }
-    setDepositAmountOpen(false);
-    setProofError(null);
-    setActiveProof("deposit");
-    setDepositModalStatus("pending");
-    try {
-      console.log("amountUnits", amountUnits);
-      const purchasableUnits = await getPurchasableUnits(amountUnits);
-      console.log("purchasableUnits", purchasableUnits);
-      const result = await generateDepositProof(Number(purchasableUnits));
-      const transactionDetails = await deposit(result.proofHex, result.publicInputs, amountUnits);
-      console.log("transaction details", transactionDetails);
-
-      let walletToUse = wallet;
-      if (!walletToUse) {
-        const reconnected = await trySilentConnect();
-        walletToUse = reconnected?.wallet ?? null;
-        if (!walletToUse) {
-          try {
-            const result = await connectWalletWithoutSignature();
-            walletToUse = result?.wallet ?? null;
-          } catch {
-            // User cancelled or connection failed
-          }
-        }
-        if (!walletToUse) {
-          setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");
-          setDepositModalStatus(null);
-          return;
-        }
-      }
-
-      const { transaction_hash } = await walletToUse.request({
-        type: "wallet_addInvokeTransaction",
-        params: {
-          calls: transactionDetails.map((transaction) => ({
-            contract_address: transaction.contract_address,
-            entry_point: transaction.entrypoint,
-            calldata: transaction.calldata ?? [],
-          })),
-        },
-      });
-
-      // wait for the transaction to be mined for 5 seconds
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      await depositCallback(transaction_hash, amountUnits);
-      console.log("deposit tx hash", transaction_hash);
-      setDepositProof(result);
-      setProofError(null);
-      setDepositModalStatus("success");
-      await refetchUserPosition();
-      setTimeout(() => setDepositModalStatus(null), 2000);
-    } catch (error) {
-      console.log("error in deposit", error);
-      setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
-      setDepositModalStatus(null);
-    } finally {
-      setActiveProof(null);
-    }
-  };
-
-  const handleGenerateWithdrawProof = async () => {
-    setProofError(null);
-    setActiveProof("withdraw");
-    try {
-      const result = await generateWithdrawProof();
-      setWithdrawProof(result);
-    } catch (error) {
-      setProofError(error instanceof Error ? error.message : "Failed to generate withdraw proof");
-    } finally {
-      setActiveProof(null);
-    }
+  const handleLoadWithdrawNotes = async () => {
+    const error = await notes.handleLoadWithdrawNotes();
+    proofs.setProofError(error);
   };
 
   return {
@@ -229,20 +130,38 @@ export function useDashboard() {
     menuOpen,
     setMenuOpen,
     menuRef,
-    depositProof,
-    withdrawProof,
-    proofError,
-    activeProof,
-    depositAmountOpen,
-    depositAmountInput,
-    setDepositAmountInput,
-    depositAmountError,
     currentPositionValue,
     allTimeYieldValue,
-    handleOpenDepositAmount,
-    handleCloseDepositAmount,
-    handleConfirmDepositAmount,
-    handleGenerateWithdrawProof,
-    depositModalStatus,
+    notes: notes.notes,
+    notesStatus: notes.notesStatus,
+    needsFileRelink: notes.needsFileRelink,
+    downloadNoteOpen: notes.downloadNoteOpen,
+    downloadPassword: notes.downloadPassword,
+    setDownloadPassword: notes.setDownloadPassword,
+    downloadPasswordError: notes.downloadPasswordError,
+    handleOpenDownloadNote: notes.handleOpenDownloadNote,
+    handleCloseDownloadNote: notes.handleCloseDownloadNote,
+    handleDownloadEncryptedNotes: notes.handleDownloadEncryptedNotes,
+    handleCreateNewNotesFile: notes.handleCreateNewNotesFile,
+    handleLinkExistingNotesFile: notes.handleLinkExistingNotesFile,
+    setWithdrawPassword: notes.setWithdrawPassword,
+    withdrawPassword: notes.withdrawPassword,
+    handleSelectNotesFile: notes.handleSelectNotesFile,
+    handleLoadWithdrawNotes,
+    selectedWithdrawCommitment: notes.selectedWithdrawCommitment,
+    setSelectedWithdrawCommitment: notes.setSelectedWithdrawCommitment,
+    depositProof: proofs.depositProof,
+    withdrawProof: proofs.withdrawProof,
+    proofError: proofs.proofError,
+    activeProof: proofs.activeProof,
+    depositAmountOpen: proofs.depositAmountOpen,
+    depositAmountInput: proofs.depositAmountInput,
+    setDepositAmountInput: proofs.setDepositAmountInput,
+    depositAmountError: proofs.depositAmountError,
+    handleOpenDepositAmount: proofs.handleOpenDepositAmount,
+    handleCloseDepositAmount: proofs.handleCloseDepositAmount,
+    handleConfirmDepositAmount: proofs.handleConfirmDepositAmount,
+    handleGenerateWithdrawProof: proofs.handleGenerateWithdrawProof,
+    depositModalStatus: proofs.depositModalStatus,
   };
 }

@@ -449,7 +449,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x23009cde47cb3fdabae7bd47636917cbec21079ab21614a053259c1197da303",
+        "0x68f29629c1f53498241b0d3f42243c77c1fcd16fb1a15f3c423add581e6a00e",
     },
     NullifierRegistry: {
       address:

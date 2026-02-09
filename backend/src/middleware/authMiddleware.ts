@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../lib/httpError";
 import { authService } from "../services/authService";
 import { jwtService } from "../services/jwtService";
+import { logger } from "@/lib/logger";
 
 function extractBearerToken(authorizationHeader?: string): string | null {
   if (!authorizationHeader) return null;

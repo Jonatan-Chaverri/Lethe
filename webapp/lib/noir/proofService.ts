@@ -35,6 +35,15 @@ export interface CircuitProofResult {
   publicInputs: string[];
   verified: boolean;
   inputs: DepositInputs | WithdrawInputs;
+  depositNote?: CreatedDepositNote;
+}
+
+export interface CreatedDepositNote {
+  commitment: string;
+  k_units: string;
+  secret: string;
+  nullifier: string;
+  leaf_index: number;
 }
 
 const artifactCache: Partial<Record<CircuitKind, Promise<CompiledCircuit>>> = {};
@@ -148,6 +157,17 @@ function randomFieldString(): string {
   return value.toString();
 }
 
+function toHexQuantity(value: number): string {
+  return `0x${Math.max(0, Math.trunc(value)).toString(16)}`;
+}
+
+function parseKUnits(value: string): number {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return 0;
+  if (trimmed.startsWith("0x")) return Number.parseInt(trimmed, 16);
+  return Number.parseInt(trimmed, 10);
+}
+
 async function pedersenHash(
   api: Awaited<ReturnType<BbModule["Barretenberg"]["new"]>>,
   values: bigint[]
@@ -174,11 +194,11 @@ async function pedersenHash(
   return parsed;
 }
 
-async function buildWithdrawInputs(): Promise<WithdrawInputs> {
-  const secret = BigInt(1111);
-  const nullifier = BigInt(2222);
-  const kUnits = 10;
-  const wUnits = 4;
+async function buildWithdrawInputs(note?: CreatedDepositNote): Promise<WithdrawInputs> {
+  const secret = BigInt(note?.secret ?? 1111);
+  const nullifier = BigInt(note?.nullifier ?? 2222);
+  const kUnits = note ? parseKUnits(note.k_units) : 10;
+  const wUnits = Math.max(1, Math.min(4, kUnits));
   const newSecret = BigInt(3333);
   const newNullifier = BigInt(4444);
   const depth = 20;
@@ -239,16 +259,31 @@ async function prove(circuit: CircuitKind, inputs: DepositInputs | WithdrawInput
 export const WBTC_UNITS_PER_BTC = 100_000_000;
 
 export async function generateDepositProof(amountUnits: number): Promise<CircuitProofResult> {
+  const secret = randomFieldString();
+  const nullifier = randomFieldString();
   const inputs: DepositInputs = {
-    secret: randomFieldString(),
-    nullifier: randomFieldString(),
+    secret,
+    nullifier,
     k_units: amountUnits,
   };
 
-  return prove("deposit", inputs);
+  const api = await getBbApi();
+  const commitment = await pedersenHash(api, [BigInt(0), BigInt(secret), BigInt(nullifier), BigInt(amountUnits)]);
+  const proofResult = await prove("deposit", inputs);
+
+  return {
+    ...proofResult,
+    depositNote: {
+      commitment: commitment.toString(),
+      k_units: toHexQuantity(amountUnits),
+      secret,
+      nullifier,
+      leaf_index: -1,
+    },
+  };
 }
 
-export async function generateWithdrawProof(): Promise<CircuitProofResult> {
-  const inputs = await buildWithdrawInputs();
+export async function generateWithdrawProof(note?: CreatedDepositNote): Promise<CircuitProofResult> {
+  const inputs = await buildWithdrawInputs(note);
   return prove("withdraw", inputs);
 }

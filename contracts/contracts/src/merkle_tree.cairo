@@ -114,6 +114,7 @@ mod MerkleTree {
             assert(self.vault_address.read() == get_caller_address(), 'Caller is not vault');
             let mut index = self.next_leaf_index.read();
             assert(index < MAX_LEAVES, 'Index out of bounds');
+            let leaf_index = index;
             self.next_leaf_index.write(index + 1);
 
             let mut hash = self.hash_leaf(commitment);
@@ -137,7 +138,7 @@ mod MerkleTree {
 
             self.emit(CommitmentInserted {
                 commitment: commitment,
-                leaf_index: index,
+                leaf_index: leaf_index,
                 new_root: hash
             });
 

@@ -1,22 +1,7 @@
 {
   "MerkleTree": {
-    "classHash": "0x23009cde47cb3fdabae7bd47636917cbec21079ab21614a053259c1197da303",
+    "contract": "MerkleTree",
     "address": "0x54b54f79dd9d58c1ec2d71c938aabf7030e2331146c073438b385f99619755f",
-    "contract": "MerkleTree"
-  },
-  "NullifierRegistry": {
-    "classHash": "0xf05b4f9d76a0e9f51075a7f30440dcdefe28da6bdb8dc2dbf7b257abd39518",
-    "address": "0x356dd825054fd653e7323ea672ffcc58adf794c59a620fb63d3a0bfad78f711",
-    "contract": "NullifierRegistry"
-  },
-  "MockWBTC": {
-    "classHash": "0x7b75718243d127c3172ab0b8a18f3ddf520e0bbd3124479d70d43a1ce74db24",
-    "address": "0x113148afe15b805093c94422cf19ba9a01c662c130e17957f4570fc7e680ff9",
-    "contract": "MockWBTC"
-  },
-  "Vault": {
-    "classHash": "0x3457370710f6a16ccd7e1f430953ea5259a7c06714ec662760c9de2963d6c3d",
-    "address": "0x3bb570b38db09d13ef43d3fc829873021c578aa33e3792e062d2c4d8af8068f",
-    "contract": "Vault"
+    "classHash": "0x68f29629c1f53498241b0d3f42243c77c1fcd16fb1a15f3c423add581e6a00e"
   }
 }

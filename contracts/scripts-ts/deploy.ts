@@ -82,8 +82,9 @@ const upgradeMode = async () => {
 
 	const deployments = loadExistingDeployments();
 
-	const vault = deployments["Vault"];
-	if (!vault) {
+	//const vault = deployments["Vault"];
+	const merkleTree = deployments["MerkleTree"];
+	if (!merkleTree) {
 		console.error(
 			red(
 				"❌ Cannot upgrade — missing Vault in deployments/<network>_latest.json"
@@ -92,7 +93,8 @@ const upgradeMode = async () => {
 		process.exit(1);
 	}
 	exportDeployments();
-	await upgradeOne("Vault", vault.address);
+	//await upgradeOne("Vault", vault.address);
+	await upgradeOne("MerkleTree", merkleTree.address);
 	console.log(green("✔ All upgrades completed"));
 };
 

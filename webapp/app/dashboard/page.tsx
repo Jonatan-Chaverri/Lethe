@@ -47,6 +47,24 @@ export default function DashboardPage() {
     handleConfirmDepositAmount,
     handleGenerateWithdrawProof,
     depositModalStatus,
+    notes,
+    notesStatus,
+    needsFileRelink,
+    downloadNoteOpen,
+    downloadPassword,
+    setDownloadPassword,
+    downloadPasswordError,
+    handleOpenDownloadNote,
+    handleCloseDownloadNote,
+    handleDownloadEncryptedNotes,
+    handleCreateNewNotesFile,
+    handleLinkExistingNotesFile,
+    withdrawPassword,
+    setWithdrawPassword,
+    handleSelectNotesFile,
+    handleLoadWithdrawNotes,
+    selectedWithdrawCommitment,
+    setSelectedWithdrawCommitment,
   } = useDashboard();
 
   if (isBootstrapping) {
@@ -254,6 +272,16 @@ export default function DashboardPage() {
                 <p className="mt-1">verified: {depositProof.verified ? "true" : "false"}</p>
               </div>
             )}
+            {notes.length > 0 && (
+              <button
+                type="button"
+                onClick={handleOpenDownloadNote}
+                className="mt-3 w-full rounded-full border border-lethe-mint bg-lethe-card px-4 py-2 text-sm font-semibold text-lethe-mint transition hover:bg-lethe-mint/10"
+              >
+                Descargar nota
+              </button>
+            )}
+            {notesStatus && <p className="mt-2 text-xs text-lethe-muted">{notesStatus}</p>}
             {depositModalStatus && (
               <div
                 className="fixed inset-0 z-[60] flex items-center justify-center bg-lethe-ink/70 px-4"
@@ -284,6 +312,70 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+            {downloadNoteOpen && (
+              <div
+                className="fixed inset-0 z-[65] flex items-center justify-center bg-lethe-ink/70 px-4"
+                aria-modal="true"
+                role="dialog"
+                onClick={handleCloseDownloadNote}
+              >
+                <div
+                  className="w-full max-w-sm rounded-2xl border border-lethe-line bg-lethe-card p-6 shadow-panel"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <h3 className="font-display text-xl text-lethe-text">Proteger archivo de notas</h3>
+                  <p className="mt-2 text-sm text-lethe-muted">
+                    Define una contraseña para cifrar `lethe-notes.json.enc`.
+                  </p>
+                  <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-lethe-muted">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    value={downloadPassword}
+                    onChange={(event) => setDownloadPassword(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-lethe-text placeholder:text-lethe-muted focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
+                    placeholder="••••••••"
+                    autoFocus
+                  />
+                  {downloadPasswordError && (
+                    <p className="mt-2 text-sm text-lethe-rose" role="alert">
+                      {downloadPasswordError}
+                    </p>
+                  )}
+                  {needsFileRelink && (
+                    <p className="mt-2 text-xs text-lethe-muted">
+                      El archivo anterior no existe en esa ruta. Puedes crear uno nuevo o vincular el archivo movido.
+                    </p>
+                  )}
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCloseDownloadNote}
+                      className="flex-1 rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={needsFileRelink ? handleCreateNewNotesFile : handleDownloadEncryptedNotes}
+                      className="flex-1 rounded-full bg-lethe-amber px-4 py-2.5 text-sm font-semibold text-lethe-ink transition hover:bg-[#ffc455]"
+                    >
+                      {needsFileRelink ? "Crear nuevo archivo" : "Descargar"}
+                    </button>
+                  </div>
+                  {needsFileRelink && (
+                    <button
+                      type="button"
+                      onClick={handleLinkExistingNotesFile}
+                      className="mt-3 w-full rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
+                    >
+                      Vincular archivo existente
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </article>
 
           <article className="rounded-2xl border border-lethe-line bg-lethe-card/90 p-6 shadow-panel">
@@ -291,6 +383,47 @@ export default function DashboardPage() {
             <p className="mt-2 text-sm text-lethe-muted">
               Burn spent notes and withdraw BTC while preserving privacy guarantees.
             </p>
+            <div className="mt-4 rounded-xl border border-lethe-line bg-lethe-steel/35 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-lethe-muted">Encrypted Notes</p>
+              <input
+                type="file"
+                accept=".enc,.json,.json.enc"
+                onChange={(event) => handleSelectNotesFile(event.target.files?.[0] ?? null)}
+                className="mt-3 block w-full text-xs text-lethe-muted file:mr-3 file:rounded-full file:border-0 file:bg-lethe-steel file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-lethe-text hover:file:bg-lethe-line/80"
+              />
+              <input
+                type="password"
+                value={withdrawPassword}
+                onChange={(event) => setWithdrawPassword(event.target.value)}
+                placeholder="Password"
+                className="mt-3 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-sm text-lethe-text placeholder:text-lethe-muted focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
+              />
+              <button
+                type="button"
+                onClick={handleLoadWithdrawNotes}
+                className="mt-3 w-full rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
+              >
+                Cargar notas
+              </button>
+              {notes.length > 0 && (
+                <>
+                  <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-lethe-muted">
+                    Nota para withdraw
+                  </label>
+                  <select
+                    value={selectedWithdrawCommitment}
+                    onChange={(event) => setSelectedWithdrawCommitment(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-sm text-lethe-text focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
+                  >
+                    {notes.map((note) => (
+                      <option key={note.commitment} value={note.commitment}>
+                        {`${note.k_units} | ${truncateProof(note.commitment)}`}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
             <p className="mt-4 text-xs uppercase tracking-[0.12em] text-lethe-muted">
               Minimum unit: {MIN_WITHDRAW_BTC.toFixed(3)} BTC
             </p>

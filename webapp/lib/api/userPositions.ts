@@ -14,6 +14,11 @@ export type TransactionDetails = {
   calldata: string[];
 };
 
+export type DepositCallbackResponse = {
+  commitment: string | null;
+  leaf_index: number | null;
+};
+
 /**
  * Fetches the connected wallet's WBTC balance.
  * @returns Balance as string in wei/smallest units. Use a formatting util for human-readable WBTC.
@@ -41,8 +46,11 @@ export async function deposit(proof: string, publicInputs: string[], amount_btc:
   return envelope.data;
 }
 
-export async function depositCallback(transaction_hash: string, deposit_units: number): Promise<void> {
-  const envelope = await apiRequest<ApiEnvelope<void>>("/api/user-positions/deposit/callback", {
+export async function depositCallback(
+  transaction_hash: string,
+  deposit_units: number
+): Promise<DepositCallbackResponse> {
+  const envelope = await apiRequest<ApiEnvelope<DepositCallbackResponse>>("/api/user-positions/deposit/callback", {
     method: "POST",
     body: { transaction_hash, deposit_units },
   });
