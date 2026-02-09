@@ -107,7 +107,6 @@ export class UserPositionsService {
         realizedPnl: 0,
         unrealizedPnl: 0,
       });
-      return;
     } else {
       await userPositionsDbService.upsert(user_id, {
         totalActiveShares: Number(current_position.total_active_shares) + deposit_units,

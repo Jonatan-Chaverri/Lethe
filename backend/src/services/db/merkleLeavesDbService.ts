@@ -112,6 +112,17 @@ export const merkleLeavesDbService = {
     }
   },
 
+  async findAllOrderedByLeafIndex(): Promise<DbMerkleLeaf[]> {
+    try {
+      return await prisma.merkleLeaf.findMany({
+        select: MERKLE_LEAF_SELECT,
+        orderBy: { leaf_index: "asc" },
+      });
+    } catch (error) {
+      throw new HttpError(500, "Failed to query all merkle leaves ordered by index", error);
+    }
+  },
+
   async count(): Promise<number> {
     try {
       return await prisma.merkleLeaf.count();

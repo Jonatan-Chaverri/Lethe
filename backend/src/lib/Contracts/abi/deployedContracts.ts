@@ -7,7 +7,7 @@ const deployedContracts = {
   sepolia: {
     MerkleTree: {
       address:
-        "0x54b54f79dd9d58c1ec2d71c938aabf7030e2331146c073438b385f99619755f",
+        "0x161cfb614dc89797df041276e3f910beec3b2b2fcdf2c60b7cccb1225319987",
       abi: [
         {
           type: "impl",
@@ -453,7 +453,7 @@ const deployedContracts = {
     },
     NullifierRegistry: {
       address:
-        "0x356dd825054fd653e7323ea672ffcc58adf794c59a620fb63d3a0bfad78f711",
+        "0x3ce0bd3e26a3e656ae8d47e151fb4560ab03f28e6ae3ee1d05dda08e4cd25a",
       abi: [
         {
           type: "impl",
@@ -871,7 +871,7 @@ const deployedContracts = {
     },
     MockWBTC: {
       address:
-        "0x113148afe15b805093c94422cf19ba9a01c662c130e17957f4570fc7e680ff9",
+        "0x7b9db5c900cf81495f307bbf1df68d3a0c4ce94ba2af6b2c4effb541066af23",
       abi: [
         {
           type: "struct",
@@ -1680,7 +1680,7 @@ const deployedContracts = {
     },
     Vault: {
       address:
-        "0x3bb570b38db09d13ef43d3fc829873021c578aa33e3792e062d2c4d8af8068f",
+        "0x1d349ec9d628fd94a610edfe206748b675b2ce032b310e9f058934b48ff7d69",
       abi: [
         {
           type: "impl",

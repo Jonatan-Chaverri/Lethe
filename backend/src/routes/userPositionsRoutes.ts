@@ -8,10 +8,12 @@ import { proofToDepositCalldata } from "@/services/onchain/garagaCalldataService
 import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 import { logger } from "@/lib/logger";
 import { BTC_ATOMS, UNIT_ATOMS } from "@/lib/Contracts";
+import { MerklePathService } from "@/services/merklePathService";
 
 export const userPositionsRoutes = Router();
 
 const userPositionsService = new UserPositionsService();
+const merklePathService = new MerklePathService();
 
 userPositionsRoutes.get("/getCurrentPosition", authMiddleware, async (req, res) => {
     const { id } = req.user!;
@@ -67,4 +69,13 @@ userPositionsRoutes.post("/deposit/callback", authMiddleware, async (req, res) =
         },
         "Deposit callback received successfully"
     );
+});
+
+userPositionsRoutes.post("/merkle/path", async (req, res) => {
+    const { commitment, leaf_index } = req.body as {
+        commitment: string;
+        leaf_index: number;
+    };
+    const path = await merklePathService.buildPath(commitment, leaf_index);
+    successResponse(res, path);
 });
