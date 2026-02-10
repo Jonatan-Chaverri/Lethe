@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ETransactionVersion, AccountInterface, RpcProvider } from "starknet";
 import { connect } from "starknetkit";
+
 import { deposit, depositCallback, getMerklePath, getPurchasableUnits, withdraw } from "@/lib/api/userPositions";
+import type { ConnectorData, StarknetWindowObject } from "starknetkit";
 import {
   generateDepositProof,
   generateWithdrawProof,
@@ -20,22 +23,13 @@ function btcToUnits(btcStr: string): number {
   return Math.round(n * WBTC_UNITS_PER_BTC);
 }
 
-type DepositWallet = {
-  request: (payload: {
-    type: "wallet_addInvokeTransaction";
-    params: {
-      calls: {
-        contract_address: string;
-        entry_point: string;
-        calldata: string[];
-      }[];
-    };
-  }) => Promise<{ transaction_hash: string }>;
-};
-
 interface UseDashboardProofsParams {
-  wallet: any;
-  connectWalletWithoutSignature: () => Promise<any>;
+  wallet: StarknetWindowObject | null;
+  account: AccountInterface | null;
+  connectWalletWithoutSignature: () => Promise<{
+    wallet: StarknetWindowObject;
+    account?: AccountInterface | null;
+  }>;
   refetchUserPosition: () => Promise<unknown>;
   getSelectedWithdrawNote: () => LetheNote | undefined;
   onDepositNoteGenerated: (note: LetheNote) => void;
@@ -46,6 +40,7 @@ interface UseDashboardProofsParams {
 
 export function useDashboardProofs({
   wallet,
+  account,
   connectWalletWithoutSignature,
   refetchUserPosition,
   getSelectedWithdrawNote,
@@ -54,6 +49,120 @@ export function useDashboardProofs({
   onOpenDownloadModal,
   onBeforeDepositStart,
 }: UseDashboardProofsParams) {
+  const asBigInt = (value: unknown): bigint | null => {
+    if (typeof value === "bigint") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return BigInt(Math.trunc(value));
+    if (typeof value === "string" && value.length > 0) {
+      try {
+        return value.startsWith("0x") || value.startsWith("0X") ? BigInt(value) : BigInt(value);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const toHex = (value: bigint): string => `0x${value.toString(16)}`;
+
+  const getCallsFromTransactions = (transactions: TransactionDetailsLike[]) =>
+    transactions.map((transaction) => ({
+      contract_address: transaction.contract_address,
+      entry_point: transaction.entrypoint,
+      calldata: transaction.calldata ?? [],
+    }));
+
+  type TransactionDetailsLike = {
+    contract_address: string;
+    entrypoint: string;
+    calldata?: string[];
+  };
+
+  type WalletConnection = {
+    wallet: StarknetWindowObject;
+    account: AccountInterface | null;
+  };
+
+  const sendInvokeWithBackendFee = async (
+    connection: WalletConnection,
+    calls: {
+      contract_address: string;
+      entry_point: string;
+      calldata: string[];
+    }[],
+    feeEstimate?: any
+  ): Promise<{ transaction_hash: string }> => {
+    const MIN_L2_GAS_AMOUNT = BigInt("2200000000");
+    const MIN_L2_GAS_PRICE = BigInt("20000000000");
+    const SCALE_NUM = BigInt(150);
+    const SCALE_DEN = BigInt(100);
+
+    const estimatedOverallFee =
+      asBigInt(feeEstimate?.overall_fee) ?? asBigInt(feeEstimate?.overallFee) ?? null;
+
+    const rb = feeEstimate?.resource_bounds ?? feeEstimate?.resourceBounds;
+    const l2Gas = rb?.l2_gas ?? rb?.l2Gas;
+    const estimatedL2Gas =
+      asBigInt(l2Gas?.max_amount) ?? asBigInt(l2Gas?.maxAmount) ?? null;
+    const estimatedL2GasPrice =
+      asBigInt(l2Gas?.max_price_per_unit) ??
+      asBigInt(l2Gas?.maxPricePerUnit) ??
+      null;
+
+    const scaledEstimatedL2Gas =
+      estimatedL2Gas !== null ? (estimatedL2Gas * SCALE_NUM) / SCALE_DEN : null;
+    const scaledEstimatedL2GasPrice =
+      estimatedL2GasPrice !== null ? (estimatedL2GasPrice * SCALE_NUM) / SCALE_DEN : null;
+
+    const maxL2Gas =
+      scaledEstimatedL2Gas !== null && scaledEstimatedL2Gas > MIN_L2_GAS_AMOUNT
+        ? scaledEstimatedL2Gas
+        : MIN_L2_GAS_AMOUNT;
+    const maxL2GasPrice =
+      scaledEstimatedL2GasPrice !== null && scaledEstimatedL2GasPrice > MIN_L2_GAS_PRICE
+        ? scaledEstimatedL2GasPrice
+        : MIN_L2_GAS_PRICE;
+
+    const minFeeFromBounds = maxL2Gas * maxL2GasPrice;
+    const scaledOverallFee =
+      estimatedOverallFee !== null ? (estimatedOverallFee * SCALE_NUM) / SCALE_DEN : null;
+    const maxFeeValue =
+      scaledOverallFee !== null && scaledOverallFee > minFeeFromBounds
+        ? scaledOverallFee
+        : minFeeFromBounds;
+
+    const details = {
+      version: ETransactionVersion.V3,
+      resourceBounds: {
+        l2_gas: { max_amount: maxL2Gas, max_price_per_unit: maxL2GasPrice },
+        l1_gas: { max_amount: BigInt("0x1000000"), max_price_per_unit: BigInt("0x1") },
+        l1_data_gas: { max_amount: BigInt("0x1000000"), max_price_per_unit: BigInt("0x1") },
+      },
+      maxFee: maxFeeValue,
+    };
+
+    const executeCalls = calls.map((call) => ({
+      contractAddress: call.contract_address,
+      entrypoint: call.entry_point,
+      calldata: call.calldata,
+      
+    }));
+
+    if (connection.account) {
+      const executeResult = await connection.account.execute(executeCalls, details);
+      if (executeResult?.transaction_hash) {
+        console.log("invoke route: connector.account.execute");
+        return { transaction_hash: executeResult.transaction_hash };
+      }
+      if ((executeResult as any)?.transactionHash) {
+        console.log("invoke route: connector.account.execute");
+        return { transaction_hash: (executeResult as any).transactionHash };
+      }
+      throw new Error("connector.account.execute did not return transaction hash");
+    }
+
+    throw new Error("No AccountInterface available. Reconnect wallet to execute with tx options.");
+  };
+
   const [depositProof, setDepositProof] = useState<CircuitProofResult | null>(null);
   const [withdrawProof, setWithdrawProof] = useState<CircuitProofResult | null>(null);
   const [proofError, setProofError] = useState<string | null>(null);
@@ -74,22 +183,31 @@ export function useDashboardProofs({
     setDepositAmountError(null);
   };
 
-  const trySilentConnect = async () => {
+  const trySilentConnect = async (): Promise<WalletConnection | null> => {
     try {
       const result = await connect({ modalMode: "neverAsk" });
-      return result.wallet && result.connectorData?.account ? result.wallet : null;
+      if (!result.wallet || !result.connectorData?.account) {
+        return null;
+      }
+      const account = await result.connector?.account(new RpcProvider({
+        nodeUrl: process.env.RPC_URL
+      }));
+      return { wallet: result.wallet as StarknetWindowObject, account: account ?? null };
     } catch {
       return null;
     }
   };
 
-  const resolveWallet = async (): Promise<DepositWallet | null> => {
-    if (wallet) return wallet;
+  const resolveWallet = async (): Promise<WalletConnection | null> => {
+    if (wallet) {
+      const walletAccount = ((wallet as any).account ?? null) as AccountInterface | null;
+      return { wallet, account: walletAccount ?? account ?? null };
+    }
     const silentlyConnected = await trySilentConnect();
-    if (silentlyConnected) return silentlyConnected as DepositWallet;
+    if (silentlyConnected) return silentlyConnected;
     try {
       const result = await connectWalletWithoutSignature();
-      return result?.wallet ?? null;
+      return { wallet: result.wallet, account: result.account ?? null };
     } catch {
       return null;
     }
@@ -123,27 +241,17 @@ export function useDashboardProofs({
     try {
       const purchasableUnits = await getPurchasableUnits(amountUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
-      const transactionDetails = await deposit(result.proofHex, result.publicInputs, amountUnits);
+      const { transactions, deposit_fee } = await deposit(result.proofHex, result.publicInputs, amountUnits);
 
-      console.log("transaction details", JSON.stringify(transactionDetails, null, 2));
-
-      const walletToUse = await resolveWallet();
-      if (!walletToUse) {
+      const connection = await resolveWallet();
+      if (!connection) {
         setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");
         setDepositModalStatus(null);
         return;
       }
 
-      const { transaction_hash } = await walletToUse.request({
-        type: "wallet_addInvokeTransaction",
-        params: {
-          calls: transactionDetails.map((transaction) => ({
-            contract_address: transaction.contract_address,
-            entry_point: transaction.entrypoint,
-            calldata: transaction.calldata ?? [],
-          })),
-        },
-      });
+      const depositCalls = getCallsFromTransactions(transactions);
+      const { transaction_hash } = await sendInvokeWithBackendFee(connection, depositCalls, deposit_fee);
 
       await new Promise((resolve) => setTimeout(resolve, 5000));
       const callbackResult = await depositCallback(transaction_hash, amountUnits);
@@ -192,27 +300,19 @@ export function useDashboardProofs({
         path_indices: merklePath.path_indices,
         root: merklePath.root,
       });
-      console.log("withdraw proof result", result);
-      const transactionDetails = await withdraw(result.proofHex, result.publicInputs, 0);
+  
+      const { transaction, withdraw_fee } = await withdraw(result.proofHex, result.publicInputs, 0);
 
-      const walletToUse = await resolveWallet();
-      if (!walletToUse) {
+      const connection = await resolveWallet();
+      if (!connection) {
         setProofError("Wallet not connected. Please connect your wallet to execute the withdraw.");
         return;
       }
 
-      await walletToUse.request({
-        type: "wallet_addInvokeTransaction",
-        params: {
-          calls: [
-            {
-              contract_address: transactionDetails.contract_address,
-              entry_point: transactionDetails.entrypoint,
-              calldata: transactionDetails.calldata ?? [],
-            },
-          ],
-        },
-      });
+      const withdrawCalls = getCallsFromTransactions([transaction]);
+      const { transaction_hash } = await sendInvokeWithBackendFee(connection, withdrawCalls, withdraw_fee);
+
+      console.log("transaction hash", transaction_hash);
 
       setWithdrawProof(result);
       await refetchUserPosition();

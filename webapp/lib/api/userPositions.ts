@@ -14,6 +14,11 @@ export type TransactionDetails = {
   calldata: string[];
 };
 
+export type WithdrawResponse = {
+  transaction: TransactionDetails;
+  withdraw_fee: any;
+};
+
 export type DepositCallbackResponse = {
   commitment: string | null;
   leaf_index: number | null;
@@ -46,16 +51,18 @@ export async function getPurchasableUnits(amount_btc: number): Promise<bigint> {
   return envelope.data;
 }
 
-export async function deposit(proof: string, publicInputs: string[], amount_btc: number): Promise<TransactionDetails[]> {
-  const envelope = await apiRequest<ApiEnvelope<TransactionDetails[]>>("/api/user-positions/deposit", {
+export async function deposit(proof: string, publicInputs: string[], amount_btc: number): Promise<
+{ transactions: TransactionDetails[], deposit_fee: any }> 
+{
+  const envelope = await apiRequest<ApiEnvelope<{ transactions: TransactionDetails[], deposit_fee: any }>>("/api/user-positions/deposit", {
     method: "POST",
     body: { proof, publicInputs, amount_btc },
   });
   return envelope.data;
 }
 
-export async function withdraw(proof: string, publicInputs: string[], amount_btc = 0): Promise<TransactionDetails> {
-  const envelope = await apiRequest<ApiEnvelope<TransactionDetails>>("/api/user-positions/withdraw", {
+export async function withdraw(proof: string, publicInputs: string[], amount_btc = 0): Promise<WithdrawResponse> {
+  const envelope = await apiRequest<ApiEnvelope<WithdrawResponse>>("/api/user-positions/withdraw", {
     method: "POST",
     body: { proof, publicInputs, amount_btc },
   });

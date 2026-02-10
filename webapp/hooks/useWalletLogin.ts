@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { connect, disconnect, getSelectedConnectorWallet } from 'starknetkit'
-import { constants } from 'starknet'
+import { constants, ProviderInterface, RpcProvider } from 'starknet'
 import { ArgentMobileConnector, isInArgentMobileAppBrowser } from 'starknetkit/argentMobile'
 import { BraavosMobileConnector } from 'starknetkit/braavosMobile'
 import type { StarknetWindowObject } from 'starknetkit'
@@ -11,10 +11,12 @@ import { InjectedConnector } from 'starknetkit/injected'
 import { isMobile } from '@/utils/platform'
 import { useAuthSession } from '@/providers/AuthProvider'
 import type { RegisterWalletPayload } from '@/lib/api/auth'
+import type { AccountInterface } from 'starknet'
 
 export function useWalletLogin() {
   const { isAuthenticated, registerWalletSession, logout, isBootstrapping } = useAuthSession()
   const [wallet, setWallet] = useState<StarknetWindowObject | null>(null)
+  const [account, setAccount] = useState<AccountInterface | null>(null)
   const [address, setAddress] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
@@ -53,7 +55,11 @@ export function useWalletLogin() {
     setIsRegistered(isAuthenticated)
   }, [isAuthenticated, isBootstrapping])
 
-  const connectWalletWithoutSignature = async () => {
+  const connectWalletWithoutSignature = async (): Promise<{
+    wallet: StarknetWindowObject;
+    connectorData: any;
+    account: AccountInterface | null;
+  }> => {
       const argentMobileOptions = {
         dappName: 'Lethe',
         chainId: process.env.NEXT_PUBLIC_STARKNET_NETWORK === 'mainnet' ? constants.NetworkName.SN_MAIN : constants.NetworkName.SN_SEPOLIA,
@@ -100,7 +106,19 @@ export function useWalletLogin() {
         throw new Error('Connection cancelled')
       }
 
-      return { wallet: result.wallet, connectorData: result.connectorData }
+      const provider = new RpcProvider({
+        nodeUrl: process.env.RPC_URL
+    });
+
+      const account = result.connector?.account
+        ? await result.connector.account(provider)
+        : null;
+
+      return {
+        wallet: result.wallet, 
+        connectorData: result.connectorData, 
+        account
+      }
   }
 
   const connectWallet = useCallback(async () => {
@@ -161,6 +179,7 @@ export function useWalletLogin() {
       }
       await registerWalletSession(payload)
       setWallet(result.wallet)
+      setAccount(result.account ?? null)
       setAddress(walletAddress)
       setIsRegistered(true)
     } catch (err: any) {
@@ -168,6 +187,7 @@ export function useWalletLogin() {
       setError(err.message || 'Wallet login failed')
       await disconnect()
       setWallet(null)
+      setAccount(null)
       setAddress(null)
       setIsRegistered(false)
     } finally {
@@ -179,12 +199,14 @@ export function useWalletLogin() {
     await disconnect()
     logout()
     setWallet(null)
+    setAccount(null)
     setAddress(null)
     setIsRegistered(false)
   }, [logout])
 
   return {
     wallet,
+    account,
     address,
     isRegistered,
     isConnecting,

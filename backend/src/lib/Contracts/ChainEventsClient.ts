@@ -85,13 +85,20 @@ export class ChainEventsClient {
     public async getTransactionEvents(tx_hash: string): Promise<EventsParser> {
         try {
             const receipt = await this.provider.getTransactionReceipt(tx_hash)
+            logger.info(`Receipt for transaction ${tx_hash}: ${JSON.stringify(receipt, null, 2)}`);
             if (receipt.isError()) {
-                return new EventsParser([], true);
+                throw new HttpError(400, 'Transaction invalid', 'TRANSACTION_INVALID');
+            }
+            if (receipt.value.execution_status === "REVERTED") {
+                throw new HttpError(400, 'Transaction reverted: ' + receipt.value.revert_reason, 'TRANSACTION_REVERTED');
             }
             const events = receipt.value.events;
             const block_number = BigInt(receipt.value.block_number);
             return new EventsParser(events, receipt.isError(), block_number, tx_hash);
         } catch (error) {
+            if (error instanceof HttpError) {
+                throw error;
+            }
             throw new HttpError(400, 'Transaction not found', 'TRANSACTION_NOT_FOUND');
         }
     }

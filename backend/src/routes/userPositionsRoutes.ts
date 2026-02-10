@@ -49,7 +49,10 @@ userPositionsRoutes.post("/deposit", authMiddleware, async (req, res) => {
         increaseAllowanceTransaction.getTransactionDetails(), 
         depositTransaction.getTransactionDetails()
     ];
-    successResponse(res, tranasctions);
+    successResponse(res, {
+        transactions: tranasctions,
+        deposit_fee: await depositTransaction.estimateInvokeFee(),
+    });
 });
 
 userPositionsRoutes.post("/deposit/callback", authMiddleware, async (req, res) => {
@@ -89,7 +92,10 @@ userPositionsRoutes.post("/withdraw", authMiddleware, async (req, res) => {
     };
     const proofCalldata = await proofToWithdrawCalldata(proof, publicInputs);
     const withdrawTransaction = await withdraw(proofCalldata, wallet);
-    successResponse(res, withdrawTransaction.getTransactionDetails());
+    successResponse(res, {
+        transaction: withdrawTransaction.getTransactionDetails(),
+        withdraw_fee: await withdrawTransaction.estimateInvokeFee(),
+    });
 });
 
 userPositionsRoutes.post("/events", async (req, res) => {

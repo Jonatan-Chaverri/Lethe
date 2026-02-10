@@ -1,7 +1,8 @@
-import { Account, CallResult, Contract, RpcProvider, Abi } from "starknet";
+import { Account, CallResult, Contract, RpcProvider, Abi, CallData } from "starknet";
 
 import { LetheContracts, TransactionDetails, TransactionType } from "./types"
 import configExternalContracts from "./abi/deployedContracts";
+import { logger } from "@/lib/logger";
 
 export class ChainClient {
     private network: string
@@ -80,6 +81,80 @@ export class ChainClient {
         const contractInstance = this.getContract(letheContract);
         const result = await contractInstance.invoke(transaction.entrypoint, transaction.calldata);
         return result;
+    }
+
+    private toSerializableBigInt(value: unknown): string | null {
+        if (typeof value === "bigint") return value.toString();
+        if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value).toString();
+        if (typeof value === "string" && value.length > 0) return value;
+        return null;
+    }
+
+    private normalizeResourceBound(bound: any) {
+        if (!bound) return null;
+        const maxAmount = this.toSerializableBigInt(bound.max_amount ?? bound.maxAmount);
+        const maxPricePerUnit = this.toSerializableBigInt(
+            bound.max_price_per_unit ?? bound.maxPricePerUnit
+        );
+        if (!maxAmount || !maxPricePerUnit) return null;
+        return {
+            max_amount: maxAmount,
+            max_price_per_unit: maxPricePerUnit,
+        };
+    }
+
+    private normalizeFeeEstimate(estimate: any) {
+        const resourceBounds = estimate?.resourceBounds ?? estimate?.resource_bounds ?? null;
+        const normalizedResourceBounds = resourceBounds
+            ? {
+                l1_gas: this.normalizeResourceBound(resourceBounds.l1_gas ?? resourceBounds.l1Gas),
+                l2_gas: this.normalizeResourceBound(resourceBounds.l2_gas ?? resourceBounds.l2Gas),
+                l1_data_gas: this.normalizeResourceBound(
+                    resourceBounds.l1_data_gas ?? resourceBounds.l1DataGas
+                ),
+            }
+            : null;
+
+        return {
+            overall_fee:
+                this.toSerializableBigInt(estimate?.overall_fee ?? estimate?.overallFee) ?? "0",
+            unit: estimate?.unit ?? "FRI",
+            resource_bounds: normalizedResourceBounds,
+        };
+    }
+
+    public async estimateInvokeFee() {
+        try {
+            const tx = this.transactionDetails!;
+            const estimate = await this.account.estimateInvokeFee([
+                {
+                    contractAddress: tx.contract_address,
+                    entrypoint: tx.entrypoint,
+                    calldata: tx.calldata,
+                },
+            ]);
+            return this.normalizeFeeEstimate(estimate);
+        } catch (error) {
+            logger.error(`Error estimating invoke fee: ${error instanceof Error ? error.message : String(error)}`);
+            return {
+                overall_fee: "13000000000000000000",
+                unit: "FRI",
+                resource_bounds: {
+                    l1_gas: {
+                        max_amount: "0",
+                        max_price_per_unit: "0",
+                    },
+                    l2_gas: {
+                        max_amount: "2000000000",
+                        max_price_per_unit: "7000000000",
+                    },
+                    l1_data_gas: {
+                        max_amount: "0",
+                        max_price_per_unit: "0",
+                    },
+                },
+            };
+        }
     }
 
     public async readStorageAt(contract_address: string, selector: string) {

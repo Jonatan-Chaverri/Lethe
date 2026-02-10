@@ -21,7 +21,7 @@ export function useDashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
-  const { address, wallet, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
+  const { address, wallet, account, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
 
   const {
     currentBalanceDisplay,
@@ -45,6 +45,7 @@ export function useDashboard() {
 
   const proofs = useDashboardProofs({
     wallet,
+    account,
     connectWalletWithoutSignature,
     refetchUserPosition,
     getSelectedWithdrawNote: () => notes.selectedNote,
