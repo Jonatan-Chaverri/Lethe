@@ -1,6 +1,6 @@
 import { ContractFactory, UNIT_ATOMS, BTC_ATOMS, ChainClient } from "@/lib/Contracts";
 import { ChainEventsClient } from "@/lib/Contracts/ChainEventsClient";
-import { DepositEvent } from "@/lib/Contracts/types/events";
+import { DepositEvent, WithdrawEvent } from "@/lib/Contracts/types/events";
 import { logger } from "@/lib/logger";
 
 const contractFactory = new ContractFactory();
@@ -38,4 +38,9 @@ export async function getDepositEvents(transactionHash: string): Promise<Deposit
 
 export async function getEvents(transactionHash: string) {
     return chainEventsClient.getTransactionEvents(transactionHash);
+}
+
+export async function getWithdrawEvents(transactionHash: string): Promise<WithdrawEvent> {
+    const events = await chainEventsClient.getTransactionEvents(transactionHash);
+    return events.getWithdrawEvents();
 }

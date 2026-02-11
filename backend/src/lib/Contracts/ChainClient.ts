@@ -135,7 +135,7 @@ export class ChainClient {
             ]);
             return this.normalizeFeeEstimate(estimate);
         } catch (error) {
-            logger.error(`Error estimating invoke fee: ${error instanceof Error ? error.message : String(error)}`);
+            logger.error(`Error estimating invoke fee`);
             return {
                 overall_fee: "13000000000000000000",
                 unit: "FRI",

@@ -2,7 +2,7 @@ import type { DbTransaction } from "./db/transactionsDbService";
 import type { DbUserPosition } from "./db/userPositionsDbService";
 import { transactionsDbService } from "./db/transactionsDbService";
 import { userPositionsDbService } from "./db/userPositionsDbService";
-import { DepositEvent } from "@/lib/Contracts/types/events";
+import { DepositEvent, WithdrawEvent } from "@/lib/Contracts/types/events";
 import { HttpError } from "@/lib/httpError";
 import { isSameAddress } from "@/lib/Contracts/utils/formatting";
 import { logger } from "@/lib/logger";
@@ -127,5 +127,11 @@ export class UserPositionsService {
       txHash: events.tx_hash,
       blockNumber: BigInt(events.block_number),
     });
+  }
+
+  async registerUserWithdraw(
+    user_id: string, user_wallet: string, events: WithdrawEvent
+  ): Promise<void> {
+    
   }
 };

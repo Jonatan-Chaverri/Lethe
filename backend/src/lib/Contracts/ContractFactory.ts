@@ -1,5 +1,6 @@
-import { ERC20Contracts } from "./types"
+import { ERC20Contracts, LetheContracts } from "./types"
 import { ERC20Service, Vault } from "./contracts"
+import { getContractAddress } from "./utils/utilities"
 
 export class ContractFactory {
     private network: string
@@ -21,5 +22,9 @@ export class ContractFactory {
 
     public getNetwork() {
         return this.network
+    }
+
+    public getNullifierRegistryAddress() {
+        return getContractAddress(this.network, LetheContracts.NULLIFIER_REGISTRY);
     }
 }

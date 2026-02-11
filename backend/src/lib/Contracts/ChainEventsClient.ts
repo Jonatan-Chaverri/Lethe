@@ -6,7 +6,10 @@ import {
     COMMITMENT_INSERTED_EVENT_SELECTOR, 
     DepositEvent, 
     TRANSFER_EVENT_SELECTOR, 
-    TransferEvent 
+    TransferEvent,
+    NullifierMarkedAsSpentEvent,
+    NULLIFIER_MARKED_AS_SPENT_EVENT_SELECTOR,
+    WithdrawEvent,
 } from "./types/events";
 import { ContractFactory } from "./ContractFactory";
 import { isSameAddress } from "./utils/formatting";
@@ -32,6 +35,56 @@ class EventsParser {
 
     public getIsError(): boolean {
         return this.isError;
+    }
+
+    public getWithdrawEvents(): WithdrawEvent {
+        const nullifierMarkedAsSpentEvents: NullifierMarkedAsSpentEvent[] = [];
+        const transferEvents: TransferEvent[] = [];
+        const commitmentInsertedEvents: CommitmentInsertedEvent[] = [];
+
+        const nullifierRegistry = contractsFactory.getNullifierRegistryAddress();
+        const wbtc = contractsFactory.getWBTCService();
+        for (const event of this.events) {
+            if (event.keys[0] === NULLIFIER_MARKED_AS_SPENT_EVENT_SELECTOR &&
+                isSameAddress(nullifierRegistry, event.from_address)
+            ) {
+                const nullifierMarkedAsSpentEvent = {
+                    nullifier_hash: String(event.data[0]),
+                }
+                nullifierMarkedAsSpentEvents.push(nullifierMarkedAsSpentEvent);
+            }
+
+            if (event.keys[0] === TRANSFER_EVENT_SELECTOR && event.keys.length === 3) {
+                const transferEvent = {
+                    from: String(event.keys[1]),
+                    to: String(event.keys[2]),
+                    amount: String(uint256.uint256ToBN({low: event.data[0], high: event.data[1]})),
+                    token: isSameAddress(wbtc.contractAddress, event.from_address) ? 'WBTC': event.from_address,
+                }
+                transferEvents.push(transferEvent);
+            }
+
+            if (event.keys[0] === COMMITMENT_INSERTED_EVENT_SELECTOR) {
+                const newRoot =
+                    event.data.length >= 5
+                        ? String(uint256.uint256ToBN({ low: event.data[3], high: event.data[4] }))
+                        : String(event.data[3]);
+                const commitmentInsertedEvent = {
+                    commitment: String(uint256.uint256ToBN({low: event.data[0], high: event.data[1]})),
+                    leaf_index: Number(event.data[2]),
+                    new_root: newRoot,
+                }
+                commitmentInsertedEvents.push(commitmentInsertedEvent);
+            }
+        }
+
+        return {
+            nullifier_marked_as_spent: nullifierMarkedAsSpentEvents,
+            transfer: transferEvents,
+            commitment_inserted: commitmentInsertedEvents,
+            block_number: this.block_number.toString(),
+            tx_hash: this.tx_hash,
+        }
     }
 
     public getDepositEvents(): DepositEvent {

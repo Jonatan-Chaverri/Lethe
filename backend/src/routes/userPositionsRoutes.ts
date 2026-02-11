@@ -3,7 +3,7 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { successResponse } from "../utils/formatting";
 import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
-import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice, withdraw } from "@/services/onchain/onChainVaultService";
+import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice, getWithdrawEvents, withdraw } from "@/services/onchain/onChainVaultService";
 import { proofToDepositCalldata, proofToWithdrawCalldata } from "@/services/onchain/garagaCalldataService";
 import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 import { logger } from "@/lib/logger";
@@ -96,6 +96,19 @@ userPositionsRoutes.post("/withdraw", authMiddleware, async (req, res) => {
         transaction: withdrawTransaction.getTransactionDetails(),
         withdraw_fee: await withdrawTransaction.estimateInvokeFee(),
     });
+});
+
+userPositionsRoutes.post("/withdraw/callback", authMiddleware, async (req, res) => {
+    const { id, wallet } = req.user!;
+    const { transaction_hash } = req.body as { transaction_hash: string };
+    const events = await getWithdrawEvents(transaction_hash);
+    if (!events || events.commitment_inserted.length === 0) {
+        throw new HttpError(400, "No commitment inserted in transaction", "NO_COMMITMENT_INSERTED");
+    }
+    const sharePrice = await getSharePrice();
+    await userPositionsService.registerUserWithdraw(id, wallet, events);
+
+    successResponse(res, events);
 });
 
 userPositionsRoutes.post("/events", async (req, res) => {
