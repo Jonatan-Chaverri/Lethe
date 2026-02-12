@@ -27,4 +27,8 @@ export class ContractFactory {
     public getNullifierRegistryAddress() {
         return getContractAddress(this.network, LetheContracts.NULLIFIER_REGISTRY);
     }
+
+    public getMerkleTreeAddress() {
+        return getContractAddress(this.network, LetheContracts.MERKLE_TREE);
+    }
 }

@@ -7,6 +7,7 @@ import { useWalletLogin } from "@/hooks/useWalletLogin";
 import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
 import { useDashboardNotes } from "@/hooks/dashboard/useDashboardNotes";
+import { getShareUnitPrice } from "@/lib/api/userPositions";
 import {
   MIN_DEPOSIT_BTC,
   MIN_WITHDRAW_BTC,
@@ -15,10 +16,40 @@ import {
 
 export { MIN_DEPOSIT_BTC, MIN_WITHDRAW_BTC };
 
+const SATS_PER_BTC = BigInt(100_000_000);
+
+function toBigIntCandidate(value: unknown): bigint | null {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return BigInt(Math.trunc(value));
+  if (typeof value === "string" && value.trim().length > 0) {
+    try {
+      return BigInt(value.trim());
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function formatBtcFromSats(value: bigint): string {
+  const whole = value / SATS_PER_BTC;
+  const fraction = value % SATS_PER_BTC;
+  return `${whole.toString()}.${fraction.toString().padStart(8, "0")}`;
+}
+
+function formatUnits(value: bigint): string {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 export function useDashboard() {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
+  const notesMenuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notesMenuOpen, setNotesMenuOpen] = useState(false);
+  const [shareUnitPriceSats, setShareUnitPriceSats] = useState<bigint | null>(null);
+  const [isLoadingSharePrice, setIsLoadingSharePrice] = useState(false);
+  const [sharePriceError, setSharePriceError] = useState<string | null>(null);
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
   const { address, wallet, account, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
@@ -48,7 +79,7 @@ export function useDashboard() {
     account,
     connectWalletWithoutSignature,
     refetchUserPosition,
-    getSelectedWithdrawNote: () => notes.selectedNote,
+    getWithdrawableNotes: () => notes.withdrawableNotes,
     onDepositNoteGenerated: (note) => {
       notes.addOrUpdateNote(note);
       void notes.persistUsingCurrentPassword();
@@ -57,12 +88,12 @@ export function useDashboard() {
       notes.applyLeafIndex(commitment, leafIndex);
       void notes.persistUsingCurrentPassword();
     },
-    onOpenDownloadModal: () => {
-      if (!notes.hasNotesPassword) {
-        notes.handleOpenDownloadNote();
-      }
+    onWithdrawNotesTransition: (spentCommitment, changeNote) => {
+      notes.applyWithdrawTransition(spentCommitment, changeNote);
     },
+    onPersistNotesAfterMutation: notes.persistUsingCurrentPassword,
     onBeforeDepositStart: notes.clearNotesStatus,
+    onBeforeWithdrawStart: notes.clearNotesStatus,
   });
 
   const walletAddress = address ?? user?.wallet ?? null;
@@ -83,16 +114,22 @@ export function useDashboard() {
   }, [isAuthenticated, isBootstrapping, router]);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !notesMenuOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
+      if (notesMenuRef.current && !notesMenuRef.current.contains(event.target as Node)) {
+        setNotesMenuOpen(false);
+      }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        setNotesMenuOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -102,12 +139,71 @@ export function useDashboard() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [menuOpen]);
+  }, [menuOpen, notesMenuOpen]);
 
-  const handleLoadWithdrawNotes = async () => {
-    const error = await notes.handleLoadWithdrawNotes();
-    proofs.setProofError(error);
-  };
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setShareUnitPriceSats(null);
+      setSharePriceError(null);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      setIsLoadingSharePrice(true);
+      setSharePriceError(null);
+      try {
+        const raw = await getShareUnitPrice();
+        const parsed = toBigIntCandidate(
+          (raw as any)?.share_unit_price ??
+            (raw as any)?.unit_price ??
+            (raw as any)?.price ??
+            (raw as any)?.current_balance ??
+            raw
+        );
+        if (parsed === null) {
+          throw new Error("Invalid share unit price response.");
+        }
+        if (active) {
+          setShareUnitPriceSats(parsed);
+        }
+      } catch (error) {
+        if (active) {
+          setSharePriceError(error instanceof Error ? error.message : "Failed to fetch share unit price.");
+          setShareUnitPriceSats(null);
+        }
+      } finally {
+        if (active) setIsLoadingSharePrice(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
+
+  const notesPositionBtcDisplay = useMemo(() => {
+    if (shareUnitPriceSats === null) return "0.00000000";
+    const totalUnits = notes.notes.reduce((acc, note) => {
+      const units = toBigIntCandidate(note.k_units);
+      if (units === null) return acc;
+      return acc + units;
+    }, BigInt(0));
+    const totalSats = totalUnits * shareUnitPriceSats;
+    return formatBtcFromSats(totalSats);
+  }, [notes.notes, shareUnitPriceSats]);
+
+  const ownedShareUnitsDisplay = useMemo(() => {
+    const totalUnits = notes.notes.reduce((acc, note) => {
+      const units = toBigIntCandidate(note.k_units);
+      if (units === null) return acc;
+      return acc + units;
+    }, BigInt(0));
+    return formatUnits(totalUnits);
+  }, [notes.notes]);
+
+  const shareUnitPriceBtcDisplay = useMemo(() => {
+    if (shareUnitPriceSats === null) return "0.00000000";
+    return formatBtcFromSats(shareUnitPriceSats);
+  }, [shareUnitPriceSats]);
 
   return {
     user,
@@ -120,7 +216,7 @@ export function useDashboard() {
     currentBalanceDisplay,
     totalYieldDisplay,
     isLoadingPosition,
-    positionError,
+    positionError: sharePriceError ?? positionError,
     wbtcBalanceDisplay,
     isLoadingWBTC,
     refetchWBTCBalance,
@@ -131,10 +227,18 @@ export function useDashboard() {
     menuOpen,
     setMenuOpen,
     menuRef,
-    currentPositionValue,
-    allTimeYieldValue,
+    notesMenuOpen,
+    setNotesMenuOpen,
+    notesMenuRef,
+    currentPositionValue: isLoadingSharePrice ? "…" : `${notesPositionBtcDisplay} BTC`,
+    allTimeYieldValue: ownedShareUnitsDisplay,
+    shareUnitPriceBtcValue: shareUnitPriceBtcDisplay,
     notes: notes.notes,
     notesStatus: notes.notesStatus,
+    linkedNotesFileName: notes.linkedNotesFileName,
+    notesAction: notes.notesAction,
+    setNotesAction: notes.setNotesAction,
+    isNotesSetupRequired: notes.isNotesSetupRequired,
     needsFileRelink: notes.needsFileRelink,
     downloadNoteOpen: notes.downloadNoteOpen,
     downloadPassword: notes.downloadPassword,
@@ -142,15 +246,10 @@ export function useDashboard() {
     downloadPasswordError: notes.downloadPasswordError,
     handleOpenDownloadNote: notes.handleOpenDownloadNote,
     handleCloseDownloadNote: notes.handleCloseDownloadNote,
-    handleDownloadEncryptedNotes: notes.handleDownloadEncryptedNotes,
+    handleRunSelectedNotesAction: notes.handleRunSelectedNotesAction,
+    handleViewCurrentNotesFile: notes.handleViewCurrentNotesFile,
     handleCreateNewNotesFile: notes.handleCreateNewNotesFile,
     handleLinkExistingNotesFile: notes.handleLinkExistingNotesFile,
-    setWithdrawPassword: notes.setWithdrawPassword,
-    withdrawPassword: notes.withdrawPassword,
-    handleSelectNotesFile: notes.handleSelectNotesFile,
-    handleLoadWithdrawNotes,
-    selectedWithdrawCommitment: notes.selectedWithdrawCommitment,
-    setSelectedWithdrawCommitment: notes.setSelectedWithdrawCommitment,
     depositProof: proofs.depositProof,
     withdrawProof: proofs.withdrawProof,
     proofError: proofs.proofError,
@@ -159,10 +258,18 @@ export function useDashboard() {
     depositAmountInput: proofs.depositAmountInput,
     setDepositAmountInput: proofs.setDepositAmountInput,
     depositAmountError: proofs.depositAmountError,
+    withdrawAmountOpen: proofs.withdrawAmountOpen,
+    withdrawAmountInput: proofs.withdrawAmountInput,
+    setWithdrawAmountInput: proofs.setWithdrawAmountInput,
+    withdrawAmountError: proofs.withdrawAmountError,
+    withdrawModalStatus: proofs.withdrawModalStatus,
+    withdrawModalProgress: proofs.withdrawModalProgress,
     handleOpenDepositAmount: proofs.handleOpenDepositAmount,
     handleCloseDepositAmount: proofs.handleCloseDepositAmount,
+    handleOpenWithdrawAmount: proofs.handleOpenWithdrawAmount,
+    handleCloseWithdrawAmount: proofs.handleCloseWithdrawAmount,
     handleConfirmDepositAmount: proofs.handleConfirmDepositAmount,
-    handleGenerateWithdrawProof: proofs.handleGenerateWithdrawProof,
+    handleConfirmWithdrawAmount: proofs.handleConfirmWithdrawAmount,
     depositModalStatus: proofs.depositModalStatus,
   };
 }

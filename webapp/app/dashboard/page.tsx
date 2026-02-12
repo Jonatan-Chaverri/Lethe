@@ -23,10 +23,14 @@ export default function DashboardPage() {
     walletAddress,
     currentPositionValue,
     allTimeYieldValue,
+    shareUnitPriceBtcValue,
     positionError,
     menuOpen,
     setMenuOpen,
     menuRef,
+    notesMenuOpen,
+    setNotesMenuOpen,
+    notesMenuRef,
     depositProof,
     withdrawProof,
     proofError,
@@ -45,10 +49,18 @@ export default function DashboardPage() {
     handleOpenDepositAmount,
     handleCloseDepositAmount,
     handleConfirmDepositAmount,
-    handleGenerateWithdrawProof,
+    handleConfirmWithdrawAmount,
+    handleOpenWithdrawAmount,
+    handleCloseWithdrawAmount,
     depositModalStatus,
+    withdrawModalStatus,
+    withdrawModalProgress,
     notes,
     notesStatus,
+    linkedNotesFileName,
+    notesAction,
+    setNotesAction,
+    isNotesSetupRequired,
     needsFileRelink,
     downloadNoteOpen,
     downloadPassword,
@@ -56,15 +68,11 @@ export default function DashboardPage() {
     downloadPasswordError,
     handleOpenDownloadNote,
     handleCloseDownloadNote,
-    handleDownloadEncryptedNotes,
-    handleCreateNewNotesFile,
-    handleLinkExistingNotesFile,
-    withdrawPassword,
-    setWithdrawPassword,
-    handleSelectNotesFile,
-    handleLoadWithdrawNotes,
-    selectedWithdrawCommitment,
-    setSelectedWithdrawCommitment,
+    handleRunSelectedNotesAction,
+    withdrawAmountOpen,
+    withdrawAmountInput,
+    setWithdrawAmountInput,
+    withdrawAmountError,
   } = useDashboard();
 
   if (isBootstrapping) {
@@ -91,42 +99,93 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-lethe-line bg-lethe-card text-lethe-text transition hover:border-lethe-mint/50"
-            >
-              <span className="text-sm font-semibold">{(user.name ?? "U").slice(0, 1).toUpperCase()}</span>
-            </button>
-            {walletAddress && (
-              <p className="mt-2 text-right font-mono text-xs text-lethe-muted">{truncateAddress(walletAddress)}</p>
-            )}
+          <div className="flex items-start gap-3">
+            <div className="relative" ref={notesMenuRef}>
+              <button
+                type="button"
+                onClick={() => setNotesMenuOpen((open) => !open)}
+                aria-expanded={notesMenuOpen}
+                aria-haspopup="menu"
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-lethe-line bg-lethe-card px-4 text-sm text-lethe-text transition hover:border-lethe-mint/50"
+              >
+                <span className="font-semibold">Notes</span>
+                <span className="max-w-36 truncate font-mono text-xs text-lethe-muted">
+                  {linkedNotesFileName ?? "No file linked"}
+                </span>
+              </button>
+              {notesMenuOpen && (
+                <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesMenuOpen(false);
+                      router.push("/dashboard/user/notes");
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/50"
+                  >
+                    See saved notes on current file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesMenuOpen(false);
+                      handleOpenDownloadNote("load-different");
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/50"
+                  >
+                    Load notes from a different file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotesMenuOpen(false);
+                      handleOpenDownloadNote("create-new");
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/50"
+                  >
+                    Create a new notes file
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {menuOpen && (
-              <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel">
-                <Link
-                  href="/dashboard/profile"
-                  className="block px-3 py-2 text-sm text-lethe-text transition hover:bg-lethe-steel/50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  View my profile
-                </Link>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setMenuOpen(false);
-                    await disconnectWallet();
-                    router.replace("/");
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-lethe-rose transition hover:bg-lethe-steel/50"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-lethe-line bg-lethe-card text-lethe-text transition hover:border-lethe-mint/50"
+              >
+                <span className="text-sm font-semibold">{(user.name ?? "U").slice(0, 1).toUpperCase()}</span>
+              </button>
+              {walletAddress && (
+                <p className="mt-2 text-right font-mono text-xs text-lethe-muted">{truncateAddress(walletAddress)}</p>
+              )}
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel">
+                  <Link
+                    href="/dashboard/profile"
+                    className="block px-3 py-2 text-sm text-lethe-text transition hover:bg-lethe-steel/50"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    View my profile
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      await disconnectWallet();
+                      router.replace("/");
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-lethe-rose transition hover:bg-lethe-steel/50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -135,7 +194,8 @@ export default function DashboardPage() {
           <p className="mt-3 font-display text-6xl leading-none text-lethe-text sm:text-7xl">
             {currentPositionValue}
           </p>
-          <p className="mt-4 text-sm text-lethe-muted">All-time yield: {allTimeYieldValue}</p>
+          <p className="mt-4 text-sm text-lethe-muted">Owned share units: {allTimeYieldValue}</p>
+          <p className="mt-1 text-sm text-lethe-muted">Unit price: {shareUnitPriceBtcValue} BTC</p>
         </section>
         {positionError && (
           <p className="mt-4 text-sm text-lethe-rose" role="alert">
@@ -272,15 +332,6 @@ export default function DashboardPage() {
                 <p className="mt-1">verified: {depositProof.verified ? "true" : "false"}</p>
               </div>
             )}
-            {notes.length > 0 && (
-              <button
-                type="button"
-                onClick={handleOpenDownloadNote}
-                className="mt-3 w-full rounded-full border border-lethe-mint bg-lethe-card px-4 py-2 text-sm font-semibold text-lethe-mint transition hover:bg-lethe-mint/10"
-              >
-                Descargar nota
-              </button>
-            )}
             {notesStatus && <p className="mt-2 text-xs text-lethe-muted">{notesStatus}</p>}
             {depositModalStatus && (
               <div
@@ -323,12 +374,64 @@ export default function DashboardPage() {
                   className="w-full max-w-sm rounded-2xl border border-lethe-line bg-lethe-card p-6 shadow-panel"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <h3 className="font-display text-xl text-lethe-text">Proteger archivo de notas</h3>
-                  <p className="mt-2 text-sm text-lethe-muted">
-                    Define una contraseña para cifrar `lethe-notes.json.enc`.
-                  </p>
+                  <h3 className="font-display text-xl text-lethe-text">Notes file manager</h3>
+                  {linkedNotesFileName && notesAction === "view-current" ? (
+                    <>
+                      <p className="mt-2 text-sm text-lethe-muted">
+                        Current note file: <span className="font-mono text-lethe-text">{linkedNotesFileName}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setNotesAction("load-different")}
+                        className="mt-3 text-xs font-semibold text-lethe-mint transition hover:underline"
+                      >
+                        Load/create a different file
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-sm text-lethe-muted">
+                        {isNotesSetupRequired
+                          ? "Loading a notes file is required before using the dashboard."
+                          : "Choose how to continue with notes."}
+                      </p>
+                      <div className="mt-4 grid gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setNotesAction("load-different")}
+                          className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                            notesAction === "load-different"
+                              ? "border-lethe-mint bg-lethe-mint/10 text-lethe-text"
+                              : "border-lethe-line text-lethe-text hover:bg-lethe-steel/50"
+                          }`}
+                        >
+                          Load notes from a different file
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNotesAction("create-new")}
+                          className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                            notesAction === "create-new"
+                              ? "border-lethe-mint bg-lethe-mint/10 text-lethe-text"
+                              : "border-lethe-line text-lethe-text hover:bg-lethe-steel/50"
+                          }`}
+                        >
+                          Create a new notes file
+                        </button>
+                        {linkedNotesFileName && (
+                          <button
+                            type="button"
+                            onClick={() => setNotesAction("view-current")}
+                            className="w-full rounded-xl border border-lethe-line px-3 py-2 text-left text-sm text-lethe-text transition hover:bg-lethe-steel/50"
+                          >
+                            Back to current file ({linkedNotesFileName})
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                   <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-lethe-muted">
-                    Contraseña
+                    Password
                   </label>
                   <input
                     type="password"
@@ -345,34 +448,30 @@ export default function DashboardPage() {
                   )}
                   {needsFileRelink && (
                     <p className="mt-2 text-xs text-lethe-muted">
-                      El archivo anterior no existe en esa ruta. Puedes crear uno nuevo o vincular el archivo movido.
+                      The previous linked path is no longer available. Load another file or create a new one.
                     </p>
                   )}
                   <div className="mt-6 flex gap-3">
                     <button
                       type="button"
                       onClick={handleCloseDownloadNote}
+                      disabled={isNotesSetupRequired}
                       className="flex-1 rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="button"
-                      onClick={needsFileRelink ? handleCreateNewNotesFile : handleDownloadEncryptedNotes}
+                      onClick={handleRunSelectedNotesAction}
                       className="flex-1 rounded-full bg-lethe-amber px-4 py-2.5 text-sm font-semibold text-lethe-ink transition hover:bg-[#ffc455]"
                     >
-                      {needsFileRelink ? "Crear nuevo archivo" : "Descargar"}
+                      {notesAction === "view-current"
+                        ? "Load current file"
+                        : notesAction === "load-different"
+                          ? "Load selected file"
+                          : "Create file"}
                     </button>
                   </div>
-                  {needsFileRelink && (
-                    <button
-                      type="button"
-                      onClick={handleLinkExistingNotesFile}
-                      className="mt-3 w-full rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
-                    >
-                      Vincular archivo existente
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -385,61 +484,114 @@ export default function DashboardPage() {
             </p>
             <div className="mt-4 rounded-xl border border-lethe-line bg-lethe-steel/35 p-3">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-lethe-muted">Encrypted Notes</p>
-              <input
-                type="file"
-                accept=".enc,.json,.json.enc"
-                onChange={(event) => handleSelectNotesFile(event.target.files?.[0] ?? null)}
-                className="mt-3 block w-full text-xs text-lethe-muted file:mr-3 file:rounded-full file:border-0 file:bg-lethe-steel file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-lethe-text hover:file:bg-lethe-line/80"
-              />
-              <input
-                type="password"
-                value={withdrawPassword}
-                onChange={(event) => setWithdrawPassword(event.target.value)}
-                placeholder="Password"
-                className="mt-3 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-sm text-lethe-text placeholder:text-lethe-muted focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
-              />
-              <button
-                type="button"
-                onClick={handleLoadWithdrawNotes}
-                className="mt-3 w-full rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
-              >
-                Cargar notas
-              </button>
-              {notes.length > 0 && (
-                <>
-                  <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-lethe-muted">
-                    Nota para withdraw
-                  </label>
-                  <select
-                    value={selectedWithdrawCommitment}
-                    onChange={(event) => setSelectedWithdrawCommitment(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-sm text-lethe-text focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
-                  >
-                    {notes.map((note) => (
-                      <option key={note.commitment} value={note.commitment}>
-                        {`${note.k_units} | ${truncateProof(note.commitment)}`}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              )}
+              <p className="mt-3 text-xs text-lethe-muted">
+                Use the <span className="font-semibold text-lethe-text">Notes</span> menu in the header bar to load
+                or create your notes file.
+              </p>
+              <p className="mt-2 text-xs text-lethe-muted">
+                Spendable notes loaded: <span className="font-semibold text-lethe-text">{notes.length}</span>
+              </p>
             </div>
             <p className="mt-4 text-xs uppercase tracking-[0.12em] text-lethe-muted">
               Minimum unit: {MIN_WITHDRAW_BTC.toFixed(3)} BTC
             </p>
             <button
               type="button"
-              onClick={handleGenerateWithdrawProof}
+              onClick={handleOpenWithdrawAmount}
               disabled={activeProof !== null}
               className="mt-6 w-full rounded-full bg-lethe-line px-5 py-3 text-base font-semibold text-lethe-text transition hover:-translate-y-0.5 hover:bg-lethe-steel"
             >
               {activeProof === "withdraw" ? "Generating proof..." : "Withdraw"}
             </button>
+            {withdrawAmountOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-lethe-ink/60 px-4"
+                aria-modal="true"
+                role="dialog"
+                onClick={handleCloseWithdrawAmount}
+              >
+                <div
+                  className="w-full max-w-sm rounded-2xl border border-lethe-line bg-lethe-card p-6 shadow-panel"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="font-display text-xl text-lethe-text">Withdraw WBTC</h3>
+                  <p className="mt-2 text-sm text-lethe-muted">
+                    Enter the amount in BTC (e.g. 0.001 or 0.5).
+                  </p>
+                  <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-lethe-muted">
+                    Amount (BTC)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.001"
+                    value={withdrawAmountInput}
+                    onChange={(e) => setWithdrawAmountInput(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 font-mono text-lethe-text placeholder:text-lethe-muted focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
+                    autoFocus
+                  />
+                  <p className="mt-2 text-xs text-lethe-muted">Min: {MIN_WITHDRAW_BTC.toFixed(3)} BTC</p>
+                  {withdrawAmountError && (
+                    <p className="mt-2 text-sm text-lethe-rose" role="alert">
+                      {withdrawAmountError}
+                    </p>
+                  )}
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCloseWithdrawAmount}
+                      className="flex-1 rounded-full border border-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel/50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmWithdrawAmount}
+                      className="flex-1 rounded-full bg-lethe-line px-4 py-2.5 text-sm font-semibold text-lethe-text transition hover:bg-lethe-steel"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {withdrawProof && (
               <div className="mt-4 rounded-xl border border-lethe-line bg-lethe-steel/30 p-3 text-xs text-lethe-muted">
                 <p className="font-semibold text-lethe-text">Proof generated</p>
                 <p className="mt-1 font-mono">proof: {truncateProof(withdrawProof.proofHex)}</p>
                 <p className="mt-1">verified: {withdrawProof.verified ? "true" : "false"}</p>
+              </div>
+            )}
+            {withdrawModalStatus && (
+              <div
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-lethe-ink/70 px-4"
+                aria-modal="true"
+                role="dialog"
+                aria-live="polite"
+              >
+                <div className="w-full max-w-sm rounded-2xl border border-lethe-line bg-lethe-card p-8 shadow-panel text-center">
+                  {withdrawModalStatus === "pending" ? (
+                    <>
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-lethe-line border-t-transparent animate-spin" />
+                      <h3 className="font-display text-xl text-lethe-text">Processing withdraw</h3>
+                      <p className="mt-2 text-sm text-lethe-muted">
+                        {withdrawModalProgress ?? "Confirm in your wallet and wait for transaction finalization."}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-lethe-mint/20 text-lethe-mint">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <h3 className="font-display text-xl text-lethe-text">Withdraw successful</h3>
+                      <p className="mt-2 text-sm text-lethe-muted">
+                        {withdrawModalProgress ?? "Your notes and balance were updated."}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </article>

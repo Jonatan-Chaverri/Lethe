@@ -36,8 +36,8 @@ export type MerklePathResponse = {
  * Fetches the connected wallet's WBTC balance.
  * @returns Balance as string in wei/smallest units. Use a formatting util for human-readable WBTC.
  */
-export async function getUserPosition(): Promise<UserPositionResponse> {
-  const envelope = await apiRequest<ApiEnvelope<UserPositionResponse>>("/api/user-positions/getCurrentPosition", {
+export async function getShareUnitPrice(): Promise<UserPositionResponse> {
+  const envelope = await apiRequest<ApiEnvelope<UserPositionResponse>>("/api/user-positions/getShareUnitPrice", {
     method: "GET",
   });
   return envelope.data;
@@ -76,6 +76,16 @@ export async function depositCallback(
   const envelope = await apiRequest<ApiEnvelope<DepositCallbackResponse>>("/api/user-positions/deposit/callback", {
     method: "POST",
     body: { transaction_hash, deposit_units },
+  });
+  return envelope.data;
+}
+
+export async function withdrawCallback(
+  transaction_hash: string,
+): Promise<DepositCallbackResponse> {
+  const envelope = await apiRequest<ApiEnvelope<DepositCallbackResponse>>("/api/user-positions/withdraw/callback", {
+    method: "POST",
+    body: { transaction_hash },
   });
   return envelope.data;
 }

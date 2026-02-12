@@ -1,7 +1,10 @@
 import { ContractFactory, UNIT_ATOMS, BTC_ATOMS, ChainClient } from "@/lib/Contracts";
 import { ChainEventsClient } from "@/lib/Contracts/ChainEventsClient";
-import { DepositEvent, WithdrawEvent } from "@/lib/Contracts/types/events";
+import { DepositEvent, MerkleTreeEvents, WithdrawEvent } from "@/lib/Contracts/types/events";
+import { Event } from "starknet";
 import { logger } from "@/lib/logger";
+import { merkleLeavesDbService } from "../db/merkleLeavesDbService";
+import { merkleRootsDbService } from "../db/merkleRootsDbService";
 
 const contractFactory = new ContractFactory();
 const chainEventsClient = new ChainEventsClient();
@@ -18,9 +21,9 @@ export async function getPurchasableUnits(amountBTC: bigint): Promise<string> {
     return purchasableKUnits.toString();
 }
 
-export async function getKUnitsPrice(kUnits: bigint): Promise<bigint> {
-    const kUnitsPrice = await vaultService.getKUnitsPrice(kUnits).call() as bigint;
-    return kUnitsPrice;
+export async function getKUnitsPrice(kUnits: bigint): Promise<Number> {
+    const kUnitsPrice = await vaultService.getKUnitsPrice(kUnits).call();
+    return Number(kUnitsPrice);
 }
 
 export async function deposit(proofCalldata: string[]): Promise<ChainClient> {
@@ -43,4 +46,30 @@ export async function getEvents(transactionHash: string) {
 export async function getWithdrawEvents(transactionHash: string): Promise<WithdrawEvent> {
     const events = await chainEventsClient.getTransactionEvents(transactionHash);
     return events.getWithdrawEvents();
+}
+
+export async function pollMerkleTreeEvents(): Promise<MerkleTreeEvents> {
+    const merkleTreeAddress = contractFactory.getMerkleTreeAddress();
+    const defaultBlockNumber = await chainEventsClient.getLatestBlockNumber();
+    const latestBlockNumber = await merkleLeavesDbService.getLatestBlockNumber(defaultBlockNumber);
+    const events = await chainEventsClient.getContractEvents(merkleTreeAddress, Number(latestBlockNumber));
+    const parsedEvents = events.getMerkleTreeEvents();
+
+    logger.info(`Found ${parsedEvents.commitment_inserted.length} commitment inserted events.. processing...`);
+    for (const event of parsedEvents.commitment_inserted) {
+        await merkleLeavesDbService.create({
+            commitment: event.commitment,
+            leafIndex: BigInt(event.leaf_index),
+            insertedRoot: event.new_root,
+            txHash: event.tx_hash ?? '',
+            blockNumber: BigInt(event.block_number ?? '0'),
+        });
+    
+        await merkleRootsDbService.create({
+            root: event.new_root,
+            txHash: event.tx_hash ?? '',
+            blockNumber: BigInt(event.block_number ?? '0'),
+        });
+    }
+    return parsedEvents;
 }

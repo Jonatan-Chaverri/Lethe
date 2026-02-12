@@ -33,11 +33,10 @@ export class Vault {
     }
 
     public getKUnitsPrice(kUnits: bigint): ChainClient {
-        const kUnitsFormmated = format_number(kUnits);
         return new ChainClient(this.network, {
             contract_address: this.contractAddress,
             entrypoint: "get_k_units_price",
-            calldata: [kUnitsFormmated.low, kUnitsFormmated.high]
+            calldata: [kUnits]
         }, TransactionType.READ);
     }
 

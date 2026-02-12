@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ETransactionVersion, AccountInterface, RpcProvider } from "starknet";
 import { connect } from "starknetkit";
 
-import { deposit, depositCallback, getMerklePath, getPurchasableUnits, withdraw } from "@/lib/api/userPositions";
+import { deposit, depositCallback, getMerklePath, getPurchasableUnits, withdraw, withdrawCallback } from "@/lib/api/userPositions";
 import type { ConnectorData, StarknetWindowObject } from "starknetkit";
 import {
   generateDepositProof,
@@ -31,11 +31,13 @@ interface UseDashboardProofsParams {
     account?: AccountInterface | null;
   }>;
   refetchUserPosition: () => Promise<unknown>;
-  getSelectedWithdrawNote: () => LetheNote | undefined;
+  getWithdrawableNotes: () => LetheNote[];
   onDepositNoteGenerated: (note: LetheNote) => void;
   onDepositLeafIndexResolved: (commitment: string, leafIndex: number) => void;
-  onOpenDownloadModal: () => void;
+  onWithdrawNotesTransition: (spentCommitment: string, changeNote?: LetheNote) => void;
+  onPersistNotesAfterMutation: () => Promise<void>;
   onBeforeDepositStart: () => void;
+  onBeforeWithdrawStart: () => void;
 }
 
 export function useDashboardProofs({
@@ -43,11 +45,13 @@ export function useDashboardProofs({
   account,
   connectWalletWithoutSignature,
   refetchUserPosition,
-  getSelectedWithdrawNote,
+  getWithdrawableNotes,
   onDepositNoteGenerated,
   onDepositLeafIndexResolved,
-  onOpenDownloadModal,
+  onWithdrawNotesTransition,
+  onPersistNotesAfterMutation,
   onBeforeDepositStart,
+  onBeforeWithdrawStart,
 }: UseDashboardProofsParams) {
   const asBigInt = (value: unknown): bigint | null => {
     if (typeof value === "bigint") return value;
@@ -170,7 +174,12 @@ export function useDashboardProofs({
   const [depositAmountOpen, setDepositAmountOpen] = useState(false);
   const [depositAmountInput, setDepositAmountInput] = useState("");
   const [depositAmountError, setDepositAmountError] = useState<string | null>(null);
+  const [withdrawAmountOpen, setWithdrawAmountOpen] = useState(false);
+  const [withdrawAmountInput, setWithdrawAmountInput] = useState("");
+  const [withdrawAmountError, setWithdrawAmountError] = useState<string | null>(null);
   const [depositModalStatus, setDepositModalStatus] = useState<"pending" | "success" | null>(null);
+  const [withdrawModalStatus, setWithdrawModalStatus] = useState<"pending" | "success" | null>(null);
+  const [withdrawModalProgress, setWithdrawModalProgress] = useState<string | null>(null);
 
   const handleOpenDepositAmount = () => {
     setDepositAmountError(null);
@@ -181,6 +190,17 @@ export function useDashboardProofs({
   const handleCloseDepositAmount = () => {
     setDepositAmountOpen(false);
     setDepositAmountError(null);
+  };
+
+  const handleOpenWithdrawAmount = () => {
+    setWithdrawAmountError(null);
+    setWithdrawAmountInput("");
+    setWithdrawAmountOpen(true);
+  };
+
+  const handleCloseWithdrawAmount = () => {
+    setWithdrawAmountOpen(false);
+    setWithdrawAmountError(null);
   };
 
   const trySilentConnect = async (): Promise<WalletConnection | null> => {
@@ -255,6 +275,7 @@ export function useDashboardProofs({
 
       await new Promise((resolve) => setTimeout(resolve, 5000));
       const callbackResult = await depositCallback(transaction_hash, amountUnits);
+      console.log("callbackResult", JSON.stringify(callbackResult, null, 2));
 
       setDepositProof(result);
       const generatedNote = result.depositNote;
@@ -263,7 +284,7 @@ export function useDashboardProofs({
         if (callbackResult.commitment && typeof callbackResult.leaf_index === "number") {
           onDepositLeafIndexResolved(callbackResult.commitment, callbackResult.leaf_index);
         }
-        onOpenDownloadModal();
+        await onPersistNotesAfterMutation();
       }
 
       setProofError(null);
@@ -278,30 +299,42 @@ export function useDashboardProofs({
     }
   };
 
-  const handleGenerateWithdrawProof = async () => {
-    setProofError(null);
-    const selectedNote = getSelectedWithdrawNote();
-    if (!selectedNote) {
-      setProofError("Load your encrypted notes file and select a note before withdrawing.");
+  const parseNoteUnits = (note: LetheNote): number => {
+    const raw = note.k_units.trim().toLowerCase();
+    if (!raw) return 0;
+    return raw.startsWith("0x") ? Number.parseInt(raw, 16) : Number.parseInt(raw, 10);
+  };
+
+  const handleConfirmWithdrawAmount = async () => {
+    setWithdrawAmountError(null);
+    const trimmed = withdrawAmountInput.trim();
+    if (!trimmed) {
+      setWithdrawAmountError("Enter an amount in BTC");
+      return;
+    }
+    const amountBtc = parseFloat(trimmed);
+    if (!Number.isFinite(amountBtc) || amountBtc < MIN_WITHDRAW_BTC) {
+      setWithdrawAmountError(`Minimum withdraw is ${MIN_WITHDRAW_BTC.toFixed(3)} BTC`);
+      return;
+    }
+    const amountUnits = btcToUnits(trimmed);
+    if (amountUnits <= 0) {
+      setWithdrawAmountError("Amount is too small");
       return;
     }
 
+    setWithdrawAmountOpen(false);
+    setProofError(null);
+    onBeforeWithdrawStart();
     setActiveProof("withdraw");
+    setWithdrawModalStatus("pending");
+    setWithdrawModalProgress("Preparing withdraw...");
     try {
-      if (!Number.isInteger(selectedNote.leaf_index) || selectedNote.leaf_index < 0) {
-        throw new Error("This note does not have a valid leaf_index yet. Reload notes from file or try again.");
+      const requiredUnitsRaw = await getPurchasableUnits(amountUnits);
+      const requiredUnits = Number(requiredUnitsRaw);
+      if (!Number.isFinite(requiredUnits) || requiredUnits <= 0) {
+        throw new Error("Unable to determine withdraw units for the requested BTC amount.");
       }
-
-      const merklePath = await getMerklePath(selectedNote.commitment, selectedNote.leaf_index);
-      console.log("merkle path", JSON.stringify(merklePath, null, 2));
-      console.log('selectedNote', JSON.stringify(selectedNote, null, 2));
-      const result = await generateWithdrawProof(selectedNote, {
-        path_elements: merklePath.path_elements,
-        path_indices: merklePath.path_indices,
-        root: merklePath.root,
-      });
-  
-      const { transaction, withdraw_fee } = await withdraw(result.proofHex, result.publicInputs, 0);
 
       const connection = await resolveWallet();
       if (!connection) {
@@ -309,16 +342,97 @@ export function useDashboardProofs({
         return;
       }
 
-      const withdrawCalls = getCallsFromTransactions([transaction]);
-      const { transaction_hash } = await sendInvokeWithBackendFee(connection, withdrawCalls, withdraw_fee);
+      const available = getWithdrawableNotes()
+        .map((note) => ({ note, units: parseNoteUnits(note) }))
+        .filter((item) => item.units > 0)
+        .sort((a, b) => b.units - a.units);
+      if (available.length === 0) {
+        throw new Error("No spendable notes available. Reload notes file and try again.");
+      }
 
-      console.log("transaction hash", transaction_hash);
+      let remainingUnits = requiredUnits;
+      let lastProof: CircuitProofResult | null = null;
+      const spendPlan = available
+        .map((item) => ({ ...item, consume: Math.min(item.units, Math.max(0, remainingUnits)) }))
+        .filter((item) => item.consume > 0);
+      let plannedRemaining = requiredUnits;
+      const planSteps = spendPlan.map((item) => {
+        const consume = Math.min(item.units, plannedRemaining);
+        plannedRemaining -= consume;
+        return consume;
+      });
+      const totalSteps = planSteps.length;
+      let currentStep = 0;
+      for (const item of available) {
+        if (remainingUnits <= 0) break;
+        const consumeUnits = Math.min(item.units, remainingUnits);
+        if (consumeUnits <= 0) continue;
+        if (!Number.isInteger(item.note.leaf_index) || item.note.leaf_index < 0) {
+          continue;
+        }
+        currentStep += 1;
+        setWithdrawModalProgress(`Processing note ${currentStep}/${Math.max(1, totalSteps)}...`);
 
-      setWithdrawProof(result);
+        const merklePath = await getMerklePath(item.note.commitment, item.note.leaf_index);
+        const result = await generateWithdrawProof(
+          {
+            commitment: item.note.commitment,
+            k_units: String(item.units),
+            secret: item.note.secret,
+            nullifier: item.note.nullifier,
+            leaf_index: item.note.leaf_index,
+          },
+          {
+            path_elements: merklePath.path_elements,
+            path_indices: merklePath.path_indices,
+            root: merklePath.root,
+          },
+          consumeUnits
+        );
+
+        const { transaction, withdraw_fee } = await withdraw(result.proofHex, result.publicInputs, 0);
+        const withdrawCalls = getCallsFromTransactions([transaction]);
+        const { transaction_hash } = await sendInvokeWithBackendFee(connection, withdrawCalls, withdraw_fee);
+        setWithdrawModalProgress(`Waiting confirmation for note ${currentStep}/${Math.max(1, totalSteps)}...`);
+        const callbackResult = await withdrawCallback(transaction_hash);
+
+        let changeNote: LetheNote | undefined;
+        if (
+          callbackResult.commitment &&
+          typeof callbackResult.leaf_index === "number" &&
+          result.withdrawNote
+        ) {
+          changeNote = {
+            ...result.withdrawNote,
+            commitment: callbackResult.commitment,
+            leaf_index: callbackResult.leaf_index,
+          };
+        }
+
+        onWithdrawNotesTransition(item.note.commitment, changeNote);
+        await onPersistNotesAfterMutation();
+        remainingUnits -= consumeUnits;
+        lastProof = result;
+      }
+
+      if (remainingUnits > 0) {
+        throw new Error("Not enough units in notes to complete requested withdraw amount.");
+      }
+
+      if (lastProof) {
+        setWithdrawProof(lastProof);
+      }
+      setWithdrawModalStatus("success");
+      setWithdrawModalProgress("Withdraw completed.");
       await refetchUserPosition();
+      setTimeout(() => {
+        setWithdrawModalStatus(null);
+        setWithdrawModalProgress(null);
+      }, 2000);
     } catch (error) {
-      console.log("withdraw proof error", error);
       setProofError(error instanceof Error ? error.message : "Failed to generate withdraw proof");
+      setWithdrawModalStatus(null);
+      setWithdrawModalProgress(null);
     } finally {
       setActiveProof(null);
     }
@@ -334,10 +448,18 @@ export function useDashboardProofs({
     depositAmountInput,
     setDepositAmountInput,
     depositAmountError,
+    withdrawAmountOpen,
+    withdrawAmountInput,
+    setWithdrawAmountInput,
+    withdrawAmountError,
+    withdrawModalStatus,
+    withdrawModalProgress,
     handleOpenDepositAmount,
     handleCloseDepositAmount,
+    handleOpenWithdrawAmount,
+    handleCloseWithdrawAmount,
     handleConfirmDepositAmount,
-    handleGenerateWithdrawProof,
+    handleConfirmWithdrawAmount,
     depositModalStatus,
   };
 }

@@ -1,4 +1,4 @@
-import { Event, logger, RpcProvider, uint256 } from "starknet";
+import { Event, logger, RpcProvider, uint256, EmittedEvent } from "starknet";
 
 import { HttpError } from "@/lib/httpError";
 import { 
@@ -10,6 +10,7 @@ import {
     NullifierMarkedAsSpentEvent,
     NULLIFIER_MARKED_AS_SPENT_EVENT_SELECTOR,
     WithdrawEvent,
+    MerkleTreeEvents,
 } from "./types/events";
 import { ContractFactory } from "./ContractFactory";
 import { isSameAddress } from "./utils/formatting";
@@ -17,19 +18,19 @@ import { isSameAddress } from "./utils/formatting";
 const contractsFactory = new ContractFactory();
 
 class EventsParser {
-    private events: Event[]
+    private events: EmittedEvent[]
     private isError: boolean
     private block_number: bigint
     private tx_hash: string
 
-    constructor(events: Event[], isError: boolean = false, block_number: bigint = BigInt(0), tx_hash: string = '') {
+    constructor(events: EmittedEvent[], isError: boolean = false, block_number: bigint = BigInt(0), tx_hash: string = '') {
         this.events = events;
         this.isError = isError;
         this.block_number = block_number;
         this.tx_hash = tx_hash;
     }
 
-    public getEvents(): Event[] {
+    public getEvents(): EmittedEvent[] {
         return this.events;
     }
 
@@ -84,6 +85,30 @@ class EventsParser {
             commitment_inserted: commitmentInsertedEvents,
             block_number: this.block_number.toString(),
             tx_hash: this.tx_hash,
+        }
+    }
+
+    public getMerkleTreeEvents(): MerkleTreeEvents {
+        const commitmentInsertedEvents: CommitmentInsertedEvent[] = [];
+        for (const event of this.events) {
+            if (event.keys[0] === COMMITMENT_INSERTED_EVENT_SELECTOR) {
+                const newRoot =
+                    event.data.length >= 5
+                        ? String(uint256.uint256ToBN({ low: event.data[3], high: event.data[4] }))
+                        : String(event.data[3]);
+                const commitmentInsertedEvent = {
+                    commitment: String(uint256.uint256ToBN({low: event.data[0], high: event.data[1]})),
+                    leaf_index: Number(event.data[2]),
+                    new_root: newRoot,
+                    block_number: event.block_number.toString(),
+                    tx_hash: event.transaction_hash,
+                }
+                
+                commitmentInsertedEvents.push(commitmentInsertedEvent);
+            }
+        }
+        return {
+            commitment_inserted: commitmentInsertedEvents,
         }
     }
 
@@ -147,12 +172,50 @@ export class ChainEventsClient {
             }
             const events = receipt.value.events;
             const block_number = BigInt(receipt.value.block_number);
-            return new EventsParser(events, receipt.isError(), block_number, tx_hash);
+            const emittedEvents: EmittedEvent[] = events.map((event: Event) => ({
+                ...event,
+                block_hash: receipt.value.block_hash,
+                block_number: receipt.value.block_number,
+                transaction_hash: tx_hash,
+            }));
+            return new EventsParser(emittedEvents, receipt.isError(), block_number, tx_hash);
         } catch (error) {
             if (error instanceof HttpError) {
                 throw error;
             }
             throw new HttpError(400, 'Transaction not found', 'TRANSACTION_NOT_FOUND');
+        }
+    }
+
+    public async getLatestBlockNumber(): Promise<bigint> {
+        const latest = await this.provider.getBlockNumber();
+        return BigInt(latest);
+    }
+
+    public async getContractEvents(
+        contractAddress: string, 
+        fromBlock: number,
+        eventsFound: EmittedEvent[] = [],
+        continuation_token?: string): Promise<EventsParser> {
+        try {
+            const latest = await this.provider.getBlockNumber();
+            logger.info(`latest block: ${latest}`);
+            const block = await this.provider.getEvents({
+                address: contractAddress,
+                from_block: { block_number: fromBlock + 1 },
+                to_block: { block_number: latest },
+                chunk_size: 1000,
+                continuation_token: continuation_token,
+            })
+            const events = block.events;
+            if (block.continuation_token) {
+                eventsFound.push(...events);
+                return this.getContractEvents(contractAddress, fromBlock + 1000, eventsFound, block.continuation_token);
+            }
+            return new EventsParser(events, false, BigInt(latest), '');
+        } catch (error) {
+            logger.error(`Error getting contract events: ${error}`);
+            throw new HttpError(400, 'Block not found', 'BLOCK_NOT_FOUND');
         }
     }
 }

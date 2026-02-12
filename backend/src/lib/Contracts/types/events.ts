@@ -14,6 +14,8 @@ export interface CommitmentInsertedEvent {
 	commitment: string,
 	leaf_index: number,
 	new_root: string,
+	block_number?: string,
+	tx_hash?: string,
 }
 
 export interface DepositEvent {
@@ -33,4 +35,8 @@ export interface WithdrawEvent {
 	commitment_inserted: CommitmentInsertedEvent[],
 	block_number: string,
 	tx_hash: string,
+}
+
+export interface MerkleTreeEvents {
+	commitment_inserted: CommitmentInsertedEvent[],
 }

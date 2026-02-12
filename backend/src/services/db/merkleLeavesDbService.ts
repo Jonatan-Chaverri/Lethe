@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db/prisma";
 import { HttpError } from "../../lib/httpError";
+import { logger } from "@/lib/logger";
 
 const MERKLE_LEAF_SELECT = {
   id: true,
@@ -39,6 +40,22 @@ export const merkleLeavesDbService = {
       });
     } catch (error) {
       throw new HttpError(500, "Failed to create merkle leaf", error);
+    }
+  },
+
+  async getLatestBlockNumber(defaultBlockNumber: bigint): Promise<bigint> {
+    try {
+      const latest = await prisma.merkleLeaf.findFirst({
+        orderBy: { block_number: "desc" },
+        select: { block_number: true },
+      });
+      if (!latest) {
+        return BigInt(0);
+      }
+      return latest.block_number;
+    } catch (error) {
+      logger.error(`Failed to get latest block number: ${error}`);
+      return defaultBlockNumber;
     }
   },
 

@@ -3,13 +3,13 @@ import { authMiddleware } from "../middleware/authMiddleware";
 import { successResponse } from "../utils/formatting";
 import { weiToWbtc } from "@/lib/Contracts/utils/formatting";
 import { UserPositionsService } from "@/services/userPositionsService";
-import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice, getWithdrawEvents, withdraw } from "@/services/onchain/onChainVaultService";
+import { deposit, getDepositEvents, getPurchasableUnits, getSharePrice, pollMerkleTreeEvents, getWithdrawEvents, withdraw } from "@/services/onchain/onChainVaultService";
 import { proofToDepositCalldata, proofToWithdrawCalldata } from "@/services/onchain/garagaCalldataService";
 import { increaseAllowance } from "@/services/onchain/OnChainWBTCService";
 import { logger } from "@/lib/logger";
 import { BTC_ATOMS, UNIT_ATOMS } from "@/lib/Contracts";
 import { MerklePathService } from "@/services/merklePathService";
-import { getEvents } from "@/services/onchain/onChainVaultService";
+import { getEvents, getKUnitsPrice } from "@/services/onchain/onChainVaultService";
 import { HttpError } from "@/lib/httpError";
 
 export const userPositionsRoutes = Router();
@@ -17,19 +17,10 @@ export const userPositionsRoutes = Router();
 const userPositionsService = new UserPositionsService();
 const merklePathService = new MerklePathService();
 
-userPositionsRoutes.get("/getCurrentPosition", authMiddleware, async (req, res) => {
+userPositionsRoutes.get("/getShareUnitPrice", authMiddleware, async (req, res) => {
     const { id } = req.user!;
-    const userPosition = await userPositionsService.getUserPosition(id);
-    const sharePrice = await getSharePrice();
-    const totalShares = userPosition?.total_active_shares ?? 0;
-    const totalAssets = sharePrice * BigInt(totalShares) * UNIT_ATOMS / BTC_ATOMS;
-    const totalYield = totalAssets - BigInt(userPosition?.total_deposited_btc ?? 0);
-    const result = {
-        current_balance: weiToWbtc(totalAssets),
-        total_yield: weiToWbtc(totalYield),
-    };
-    logger.info(`Current position for user ${id} is ${JSON.stringify(result)}`);
-    successResponse(res, result);
+    const shareUnitPrice = await getKUnitsPrice(BigInt(1));
+    successResponse(res, shareUnitPrice);
 });
 
 userPositionsRoutes.post("/getPurchasableUnits", authMiddleware, async (req, res) => {
@@ -56,24 +47,16 @@ userPositionsRoutes.post("/deposit", authMiddleware, async (req, res) => {
 });
 
 userPositionsRoutes.post("/deposit/callback", authMiddleware, async (req, res) => {
-    const { id, wallet } = req.user!;
-    const { transaction_hash, deposit_units } = req.body as { transaction_hash: string, deposit_units: number, share_price: number };
+    const { transaction_hash, deposit_units } = req.body as { transaction_hash: string, deposit_units: number };
     logger.info(`Deposit callback received for transaction ${transaction_hash} with ${deposit_units} units`);
     const events = await getDepositEvents(transaction_hash);
     if (!events || events.commitment_inserted.length === 0) {
         throw new HttpError(400, "No commitment inserted in transaction", "NO_COMMITMENT_INSERTED");
     }
-    const sharePrice = await getSharePrice();
-    await userPositionsService.registerUserDeposit(id, wallet, deposit_units, Number(sharePrice), events);
-    const insertedCommitment = events.commitment_inserted[0];
-    successResponse(
-        res,
-        {
-            commitment: insertedCommitment?.commitment ?? null,
-            leaf_index: insertedCommitment?.leaf_index ?? null,
-        },
-        "Deposit callback received successfully"
-    );
+    successResponse(res, { 
+        commitment: String(events.commitment_inserted[0].commitment),
+        leaf_index: Number(events.commitment_inserted[0].leaf_index),
+    }, "Deposit callback received successfully");
 });
 
 userPositionsRoutes.post("/merkle/path", async (req, res) => {
@@ -99,20 +82,26 @@ userPositionsRoutes.post("/withdraw", authMiddleware, async (req, res) => {
 });
 
 userPositionsRoutes.post("/withdraw/callback", authMiddleware, async (req, res) => {
-    const { id, wallet } = req.user!;
     const { transaction_hash } = req.body as { transaction_hash: string };
     const events = await getWithdrawEvents(transaction_hash);
-    if (!events || events.commitment_inserted.length === 0) {
+    if (!events || events.nullifier_marked_as_spent.length === 0) {
         throw new HttpError(400, "No commitment inserted in transaction", "NO_COMMITMENT_INSERTED");
     }
-    const sharePrice = await getSharePrice();
-    await userPositionsService.registerUserWithdraw(id, wallet, events);
-
-    successResponse(res, events);
+    if (events.commitment_inserted.length === 0) {
+        successResponse(res, {
+            commitment: null,
+            leaf_index: null,
+        }, 'Withdraw successfully');
+    } else {
+        successResponse(res, {
+            commitment: String(events.commitment_inserted[0].commitment),
+            leaf_index: Number(events.commitment_inserted[0].leaf_index),
+        }, 'Withdraw successfully');
+    }
 });
 
 userPositionsRoutes.post("/events", async (req, res) => {
-    const { transaction_hash } = req.body as { transaction_hash: string };
-    const events = await getEvents(transaction_hash);
-    successResponse(res, events.getEvents());
+    const { from_block } = req.body as { from_block: number };
+    const events = await pollMerkleTreeEvents();
+    successResponse(res, events);
 });

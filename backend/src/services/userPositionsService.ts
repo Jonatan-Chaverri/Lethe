@@ -90,29 +90,6 @@ export class UserPositionsService {
       logger.error(`User wallet does not match deposit wallet: ${user_wallet} !== ${events.transfer[0].from}`);
       throw new HttpError(400, "User wallet does not match deposit wallet");
     }
-    await transactionsDbService.create({
-      userId: user_id,
-      depositCommitment: events.commitment_inserted[0].commitment,
-      depositAmountBtc: events.transfer[0].amount,
-      depositShares: deposit_units,
-      depositSharePrice: share_price,
-    });
-
-    const current_position = await userPositionsDbService.getByUserId(user_id);
-    if (!current_position) {
-      await userPositionsDbService.upsert(user_id, {
-        totalActiveShares: deposit_units,
-        totalDepositedBtc: events.transfer[0].amount,
-        totalWithdrawnBtc: 0,
-        realizedPnl: 0,
-        unrealizedPnl: 0,
-      });
-    } else {
-      await userPositionsDbService.upsert(user_id, {
-        totalActiveShares: Number(current_position.total_active_shares) + deposit_units,
-        totalDepositedBtc: Number(current_position.total_deposited_btc) + Number(events.transfer[0].amount),
-      });
-    }
 
     await merkleLeavesDbService.create({
       commitment: events.commitment_inserted[0].commitment,

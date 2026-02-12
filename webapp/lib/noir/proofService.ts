@@ -42,6 +42,7 @@ export interface CircuitProofResult {
   verified: boolean;
   inputs: DepositInputs | WithdrawInputs;
   depositNote?: CreatedDepositNote;
+  withdrawNote?: CreatedDepositNote;
 }
 
 export interface CreatedDepositNote {
@@ -200,16 +201,25 @@ async function pedersenHash(
   return parsed;
 }
 
-async function buildWithdrawInputs(note: CreatedDepositNote, path: WithdrawMerklePath): Promise<WithdrawInputs> {
+async function buildWithdrawInputsForUnits(
+  note: CreatedDepositNote,
+  path: WithdrawMerklePath,
+  withdrawUnits: number
+): Promise<WithdrawInputs> {
   if (!note) {
     throw new Error("Missing note for withdraw proof");
   }
-  const secret = BigInt(note?.secret ?? 1111);
-  const nullifier = BigInt(note?.nullifier ?? 2222);
-  const kUnits = note ? parseKUnits(note.k_units) : 10;
-  const wUnits = Math.max(1, Math.min(4, kUnits));
-  const newSecret = BigInt(3333);
-  const newNullifier = BigInt(4444);
+  const secret = BigInt(note.secret);
+  const nullifier = BigInt(note.nullifier);
+  const kUnits = parseKUnits(note.k_units);
+  if (!Number.isInteger(withdrawUnits) || withdrawUnits <= 0) {
+    throw new Error("Withdraw units must be a positive integer.");
+  }
+  if (withdrawUnits > kUnits) {
+    throw new Error("Withdraw units cannot exceed note units.");
+  }
+  const newSecret = BigInt(randomFieldString());
+  const newNullifier = BigInt(randomFieldString());
   const api = await getBbApi();
   const nullifierHash = await pedersenHash(api, [nullifier]);
 
@@ -223,7 +233,7 @@ async function buildWithdrawInputs(note: CreatedDepositNote, path: WithdrawMerkl
     root: path.root,
     nullifier_hash: nullifierHash.toString(),
     k_units: kUnits,
-    w_units: wUnits,
+    w_units: withdrawUnits,
   };
 }
 
@@ -274,7 +284,31 @@ export async function generateDepositProof(amountUnits: number): Promise<Circuit
   };
 }
 
-export async function generateWithdrawProof(note: CreatedDepositNote, path: WithdrawMerklePath): Promise<CircuitProofResult> {
-  const inputs = await buildWithdrawInputs(note, path);
-  return prove("withdraw", inputs);
+export async function generateWithdrawProof(
+  note: CreatedDepositNote,
+  path: WithdrawMerklePath,
+  withdrawUnits: number
+): Promise<CircuitProofResult> {
+  const inputs = await buildWithdrawInputsForUnits(note, path, withdrawUnits);
+  const proofResult = await prove("withdraw", inputs);
+
+  const remainingUnits = inputs.k_units - inputs.w_units;
+  const api = await getBbApi();
+  const newCommitment = await pedersenHash(
+    api, 
+    [BigInt(0), BigInt(inputs.new_secret), BigInt(inputs.new_nullifier), BigInt(remainingUnits)]
+  );
+  return {
+    ...proofResult,
+    withdrawNote:
+      remainingUnits > 0
+        ? {
+            commitment: newCommitment.toString(),
+            k_units: remainingUnits.toString(),
+            secret: inputs.new_secret,
+            nullifier: inputs.new_nullifier,
+            leaf_index: -1,
+          }
+        : undefined,
+  };
 }
