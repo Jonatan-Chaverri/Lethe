@@ -389,12 +389,14 @@ export function useDashboardProofs({
           },
           consumeUnits
         );
+        console.log("result", JSON.stringify(result, null, 2));
 
         const { transaction, withdraw_fee } = await withdraw(result.proofHex, result.publicInputs, 0);
         const withdrawCalls = getCallsFromTransactions([transaction]);
         const { transaction_hash } = await sendInvokeWithBackendFee(connection, withdrawCalls, withdraw_fee);
         setWithdrawModalProgress(`Waiting confirmation for note ${currentStep}/${Math.max(1, totalSteps)}...`);
         const callbackResult = await withdrawCallback(transaction_hash);
+        console.log("callbackResult", JSON.stringify(callbackResult, null, 2));
 
         let changeNote: LetheNote | undefined;
         if (

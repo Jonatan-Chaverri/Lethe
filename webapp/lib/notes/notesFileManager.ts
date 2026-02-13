@@ -12,8 +12,10 @@ const HANDLE_DB_NAME = "lethe-notes-db";
 const HANDLE_STORE_NAME = "settings";
 const HANDLE_KEY = "notesFileHandle";
 const PASSWORD_STORAGE_KEY = "letheNotesPassword";
+const NOTES_FILE_NAME = "lethe-notes.json.enc";
 
 export type NotesFileHandle = {
+  mode?: "fs-access" | "download";
   name?: string;
   getFile?: () => Promise<File>;
   createWritable?: () => Promise<{
@@ -127,11 +129,26 @@ export async function pickNewNotesFileHandle(): Promise<NotesFileHandle> {
     | ((options: Record<string, unknown>) => Promise<NotesFileHandle>)
     | undefined;
   if (!picker) {
-    throw new Error("Your browser does not support selecting a persistent file.");
+    return {
+      mode: "download",
+      name: NOTES_FILE_NAME,
+    };
   }
-  return await picker({
-    suggestedName: "lethe-notes.json.enc",
+  const handle = await picker({
+    suggestedName: NOTES_FILE_NAME,
     types: [{ description: "Encrypted Lethe notes", accept: { "application/json": [".enc", ".json.enc"] } }],
+  });
+  (handle as NotesFileHandle).mode = "fs-access";
+  return handle;
+}
+
+async function pickNotesFileViaInput(): Promise<File | null> {
+  return await new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".enc,.json.enc,application/json";
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.click();
   });
 }
 
@@ -140,13 +157,33 @@ export async function pickExistingNotesFileHandle(): Promise<NotesFileHandle | n
     | ((options: Record<string, unknown>) => Promise<NotesFileHandle[]>)
     | undefined;
   if (!picker) {
-    throw new Error("Your browser does not support linking an existing file.");
+    const selected = await pickNotesFileViaInput();
+    if (!selected) return null;
+    return {
+      mode: "download",
+      name: selected.name,
+      getFile: async () => selected,
+    };
   }
   const [handle] = await picker({
     multiple: false,
     types: [{ description: "Encrypted Lethe notes", accept: { "application/json": [".enc", ".json.enc"] } }],
   });
-  return handle ?? null;
+  if (!handle) return null;
+  (handle as NotesFileHandle).mode = "fs-access";
+  return handle;
+}
+
+function triggerNotesDownload(content: string, fileName: string): void {
+  const blob = new Blob([content], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
 export async function readNotesFromHandle(
@@ -194,15 +231,43 @@ export async function writeNotesToHandle(
   if (!normalizedPassword) {
     throw new Error("Password is required.");
   }
+  const outputNotes = nextNotes;
+  const content = await encryptNotesPayload(
+    {
+      version: 1,
+      network: getStarknetNetworkName(),
+      notes: outputNotes,
+    },
+    normalizedPassword
+  );
+
+  if (!handle.createWritable) {
+    if (handle.getFile) {
+      try {
+        await readNotesFromHandle(handle, normalizedPassword, allowPromptPermission);
+      } catch (error) {
+        if (error instanceof Error && error.message === "Invalid password or corrupted file") {
+          throw new Error("Password does not match the existing notes file.");
+        }
+        if (!isMissingNotesFileError(error)) {
+          throw error;
+        }
+        throw error;
+      }
+    }
+    const fileName = handle.name ?? NOTES_FILE_NAME;
+    triggerNotesDownload(content, fileName);
+    handle.getFile = async () => new File([content], fileName, { type: "application/json" });
+    return { notes: outputNotes, fileName };
+  }
+
   const allowed = await ensureNotesFilePermission(handle, "readwrite", allowPromptPermission);
   if (!allowed) {
     throw new Error("No write permission for linked notes file.");
   }
-  if (!handle.createWritable || !handle.getFile) {
+  if (!handle.getFile) {
     throw new Error("Current notes file handle is invalid.");
   }
-
-  let outputNotes = nextNotes;
   try {
     await readNotesFromHandle(handle, normalizedPassword, allowPromptPermission);
   } catch (error) {
@@ -214,18 +279,9 @@ export async function writeNotesToHandle(
     }
     throw error;
   }
-
-  const content = await encryptNotesPayload(
-    {
-      version: 1,
-      network: getStarknetNetworkName(),
-      notes: outputNotes,
-    },
-    normalizedPassword
-  );
   const writable = await handle.createWritable();
   await writable.write(content);
   await writable.close();
 
-  return { notes: outputNotes, fileName: handle.name ?? "lethe-notes.json.enc" };
+  return { notes: outputNotes, fileName: handle.name ?? NOTES_FILE_NAME };
 }

@@ -82,3 +82,11 @@ model MerkleRoot {
   @@index([block_number])
   @@map("merkle_roots")
 }
+
+model SharePrice {
+  id               String   @id @default(uuid()) @db.Uuid
+  price_per_k_unit Decimal  @db.Decimal(36, 18)
+  created_at       DateTime @default(now())
+
+  @@map("share_price")
+}

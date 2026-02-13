@@ -9,6 +9,7 @@ import { healthRoutes } from "./routes/healthRoutes";
 import { requestId } from "./middleware/requestId";
 import { onChainRoutes } from "./routes/onChainRoutes";
 import { userPositionsRoutes } from "./routes/userPositionsRoutes";
+import { sharePriceRoutes } from "./routes/sharePriceRoutes";
 
 function allowedOrigin(
   requestOrigin: string | undefined,
@@ -46,6 +47,7 @@ export function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/onchain", onChainRoutes);
   app.use("/api/user-positions", userPositionsRoutes);
+  app.use("/api/sharePrice", sharePriceRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

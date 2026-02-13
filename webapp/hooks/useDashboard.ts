@@ -34,7 +34,8 @@ function toBigIntCandidate(value: unknown): bigint | null {
 function formatBtcFromSats(value: bigint): string {
   const whole = value / SATS_PER_BTC;
   const fraction = value % SATS_PER_BTC;
-  return `${whole.toString()}.${fraction.toString().padStart(8, "0")}`;
+  const fractional = fraction.toString().padStart(8, "0").replace(/0+$/, "");
+  return fractional ? `${whole.toString()}.${fractional}` : whole.toString();
 }
 
 function formatUnits(value: bigint): string {
@@ -181,7 +182,7 @@ export function useDashboard() {
   }, [isAuthenticated]);
 
   const notesPositionBtcDisplay = useMemo(() => {
-    if (shareUnitPriceSats === null) return "0.00000000";
+    if (shareUnitPriceSats === null) return "0";
     const totalUnits = notes.notes.reduce((acc, note) => {
       const units = toBigIntCandidate(note.k_units);
       if (units === null) return acc;
@@ -201,7 +202,7 @@ export function useDashboard() {
   }, [notes.notes]);
 
   const shareUnitPriceBtcDisplay = useMemo(() => {
-    if (shareUnitPriceSats === null) return "0.00000000";
+    if (shareUnitPriceSats === null) return "0";
     return formatBtcFromSats(shareUnitPriceSats);
   }, [shareUnitPriceSats]);
 
