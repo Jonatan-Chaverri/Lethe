@@ -143,12 +143,17 @@ const deployScript = async (): Promise<void> => {
 
 	let wbtcAddress = "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac";
 	if (argv.network === "sepolia") {
-		const { address } = await deployContract({
-			contract: "MockWBTC",
-			constructorArgs: { default_admin: admin, minter: admin, upgrader: admin },
-		});
-		wbtcAddress = address;
-		console.log(green("✔ MockWBTC deployed at "), wbtcAddress);
+		if (process.env.MOCK_WBTC_ADDRESS) {
+			wbtcAddress = process.env.MOCK_WBTC_ADDRESS;
+			console.log(green("✔ MockWBTC address found in environment variables: "), wbtcAddress);
+		} else {
+			const { address } = await deployContract({
+				contract: "MockWBTC",
+				constructorArgs: { default_admin: admin, minter: admin, upgrader: admin },
+			});
+			wbtcAddress = address;
+			console.log(green("✔ MockWBTC deployed at "), wbtcAddress);
+		}
 	}
 
 	const depositVerifierAddress = await deployGaragaVerifier("deposit");

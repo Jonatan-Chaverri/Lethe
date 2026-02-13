@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useDashboard, MIN_DEPOSIT_BTC, MIN_WITHDRAW_BTC } from "@/hooks/useDashboard";
+import type { ChartRange } from "@/lib/api/sharePrice";
 
 function truncateAddress(value: string): string {
   if (value.length <= 14) return value;
@@ -13,6 +14,28 @@ function truncateAddress(value: string): string {
 function truncateProof(value: string): string {
   if (value.length <= 30) return value;
   return `${value.slice(0, 14)}...${value.slice(-14)}`;
+}
+
+function timestampToMs(value: number): number {
+  return value < 1_000_000_000_000 ? value * 1000 : value;
+}
+
+function formatTick(ts: number, range: ChartRange): string {
+  const date = new Date(timestampToMs(ts));
+  if (range === "1h") {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  if (range === "1d") {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function formatPriceTick(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1) return `${value.toFixed(2)} BTC`;
+  if (abs >= 0.01) return `${value.toFixed(4)} BTC`;
+  return `${value.toFixed(6)} BTC`;
 }
 
 export default function DashboardPage() {
@@ -27,6 +50,11 @@ export default function DashboardPage() {
     currentPositionValue,
     allTimeYieldValue,
     shareUnitPriceBtcValue,
+    chartRange,
+    setChartRange,
+    chartData,
+    isLoadingChart,
+    chartError,
     positionError,
     menuOpen,
     setMenuOpen,
@@ -77,6 +105,59 @@ export default function DashboardPage() {
     setWithdrawAmountInput,
     withdrawAmountError,
   } = useDashboard();
+
+  const chartGeometry = useMemo(() => {
+    const width = 760;
+    const height = 220;
+    const padLeft = 96;
+    const padRight = 18;
+    const padY = 18;
+
+    if (chartData.length < 2) {
+      return {
+        path: "",
+        areaPath: "",
+        xTicks: [] as Array<{ x: number; label: string }>,
+        yTicks: [] as Array<{ y: number; label: string }>,
+      };
+    }
+
+    const sorted = [...chartData].sort((a, b) => a.timestamp - b.timestamp);
+    const minX = sorted[0].timestamp;
+    const maxX = sorted[sorted.length - 1].timestamp;
+    const minY = Math.min(...sorted.map((point) => point.price));
+    const maxY = Math.max(...sorted.map((point) => point.price));
+    const spreadY = maxY - minY || 1;
+    const spreadX = maxX - minX || 1;
+    const innerW = width - padLeft - padRight;
+    const innerH = height - padY * 2;
+
+    const points = sorted.map((point) => {
+      const x = padLeft + ((point.timestamp - minX) / spreadX) * innerW;
+      const y = padY + innerH - ((point.price - minY) / spreadY) * innerH;
+      return { x, y, timestamp: point.timestamp };
+    });
+
+    const path = points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .join(" ");
+    const areaPath = `${path} L ${points[points.length - 1].x.toFixed(2)} ${(height - padY).toFixed(
+      2
+    )} L ${padLeft.toFixed(2)} ${(height - padY).toFixed(2)} Z`;
+    const mid = points[Math.floor(points.length / 2)];
+    const xTicks = [
+      { x: points[0].x, label: formatTick(points[0].timestamp, chartRange) },
+      { x: mid.x, label: formatTick(mid.timestamp, chartRange) },
+      { x: points[points.length - 1].x, label: formatTick(points[points.length - 1].timestamp, chartRange) },
+    ];
+    const yTicks = [0, 0.5, 1].map((ratio) => {
+      const y = padY + innerH - ratio * innerH;
+      const value = minY + ratio * spreadY;
+      return { y, label: formatPriceTick(value) };
+    });
+
+    return { path, areaPath, xTicks, yTicks };
+  }, [chartData, chartRange]);
 
   if (isBootstrapping) {
     return (
@@ -212,11 +293,69 @@ export default function DashboardPage() {
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2 text-sm text-[#c9c9c9]">
             <p>
-              Owned share units: <span className="font-mono text-white">{allTimeYieldValue}</span>
+              Owned shares: <span className="font-mono text-white">{allTimeYieldValue}</span>
             </p>
             <p>
               Share unit price: <span className="font-mono text-white">{shareUnitPriceBtcValue} BTC</span>
             </p>
+          </div>
+          <div className="mt-6 rounded-2xl border border-[#2c2c2c] bg-[#101010]/85 p-4 sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#b4b4b4]">Price History</p>
+              <div className="inline-flex rounded-full border border-[#3b2a11] bg-[#161616] p-1">
+                {(["1h", "1d", "7d"] as const).map((range) => (
+                  <button
+                    key={range}
+                    type="button"
+                    onClick={() => setChartRange(range)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                      chartRange === range
+                        ? "bg-gradient-to-r from-[#f7931a] to-[#ffb347] text-black"
+                        : "text-[#d1d1d1] hover:bg-[#232323]"
+                    }`}
+                  >
+                    {range.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="h-56">
+              {isLoadingChart ? (
+                <div className="flex h-full items-center justify-center text-sm text-[#b4b4b4]">Loading chart...</div>
+              ) : chartError ? (
+                <div className="flex h-full items-center justify-center text-sm text-lethe-rose">{chartError}</div>
+              ) : chartData.length < 2 ? (
+                <div className="flex h-full items-center justify-center text-sm text-[#b4b4b4]">Not enough data.</div>
+              ) : (
+                <svg viewBox="0 0 760 220" className="h-full w-full">
+                  <defs>
+                    <linearGradient id="chartAreaFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f7931a" stopOpacity="0.35" />
+                      <stop offset="100%" stopColor="#f7931a" stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="0" y="0" width="760" height="220" fill="transparent" />
+                  {chartGeometry.yTicks.map((tick) => (
+                    <g key={`${tick.y}-${tick.label}`}>
+                      <line x1={96} y1={tick.y} x2={742} y2={tick.y} stroke="#252525" strokeWidth="1" />
+                      <text x={88} y={tick.y + 4} fill="#9f9f9f" fontSize="11" textAnchor="end">
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
+                  <path d={chartGeometry.areaPath} fill="url(#chartAreaFill)" />
+                  <path d={chartGeometry.path} fill="none" stroke="#f8b84f" strokeWidth="3" strokeLinecap="round" />
+                  {chartGeometry.xTicks.map((tick) => (
+                    <g key={`${tick.x}-${tick.label}`}>
+                      <line x1={tick.x} y1={198} x2={tick.x} y2={205} stroke="#5a5a5a" strokeWidth="1" />
+                      <text x={tick.x} y={216} fill="#9f9f9f" fontSize="11" textAnchor="middle">
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              )}
+            </div>
           </div>
         </section>
         {positionError && (

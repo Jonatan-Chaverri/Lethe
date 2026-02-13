@@ -8,6 +8,7 @@ import { useUserPosition } from "@/hooks/useUserPosition";
 import { useWBTC } from "@/hooks/useWBTC";
 import { useDashboardNotes } from "@/hooks/dashboard/useDashboardNotes";
 import { getShareUnitPrice } from "@/lib/api/userPositions";
+import { fetchChartData, type ChartDataPoint, type ChartRange, type ChartInterval } from "@/lib/api/sharePrice";
 import {
   MIN_DEPOSIT_BTC,
   MIN_WITHDRAW_BTC,
@@ -42,6 +43,12 @@ function formatUnits(value: bigint): string {
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function getIntervalForRange(range: ChartRange): ChartInterval {
+  if (range === "1h") return "1m";
+  if (range === "1d") return "1h";
+  return "1d";
+}
+
 export function useDashboard() {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -51,6 +58,10 @@ export function useDashboard() {
   const [shareUnitPriceSats, setShareUnitPriceSats] = useState<bigint | null>(null);
   const [isLoadingSharePrice, setIsLoadingSharePrice] = useState(false);
   const [sharePriceError, setSharePriceError] = useState<string | null>(null);
+  const [chartRange, setChartRange] = useState<ChartRange>("1d");
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
 
   const { user, isAuthenticated, isBootstrapping } = useAuth();
   const { address, wallet, account, disconnectWallet, connectWalletWithoutSignature } = useWalletLogin();
@@ -104,7 +115,7 @@ export function useDashboard() {
     [isLoadingPosition, currentBalanceDisplay]
   );
   const allTimeYieldValue = useMemo(
-    () => (isLoadingPosition ? "…" : `${totalYieldDisplay} BTC`),
+    () => (isLoadingPosition ? "…" : `${Number(totalYieldDisplay)/100000} BTC`),
     [isLoadingPosition, totalYieldDisplay]
   );
 
@@ -181,6 +192,36 @@ export function useDashboard() {
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setChartData([]);
+      setChartError(null);
+      return;
+    }
+    let active = true;
+    const interval = getIntervalForRange(chartRange);
+
+    void (async () => {
+      setIsLoadingChart(true);
+      setChartError(null);
+      try {
+        const points = await fetchChartData(interval, chartRange);
+        if (!active) return;
+        setChartData(points);
+      } catch (error) {
+        if (!active) return;
+        setChartError(error instanceof Error ? error.message : "Failed to fetch chart data.");
+        setChartData([]);
+      } finally {
+        if (active) setIsLoadingChart(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, chartRange]);
+
   const notesPositionBtcDisplay = useMemo(() => {
     if (shareUnitPriceSats === null) return "0";
     const totalUnits = notes.notes.reduce((acc, note) => {
@@ -198,12 +239,12 @@ export function useDashboard() {
       if (units === null) return acc;
       return acc + units;
     }, BigInt(0));
-    return formatUnits(totalUnits);
+    return (Number(totalUnits)/1000).toFixed(8);
   }, [notes.notes]);
 
   const shareUnitPriceBtcDisplay = useMemo(() => {
     if (shareUnitPriceSats === null) return "0";
-    return formatBtcFromSats(shareUnitPriceSats);
+    return formatBtcFromSats(shareUnitPriceSats * BigInt(1000));
   }, [shareUnitPriceSats]);
 
   return {
@@ -234,6 +275,11 @@ export function useDashboard() {
     currentPositionValue: isLoadingSharePrice ? "…" : `${notesPositionBtcDisplay} BTC`,
     allTimeYieldValue: ownedShareUnitsDisplay,
     shareUnitPriceBtcValue: shareUnitPriceBtcDisplay,
+    chartRange,
+    setChartRange,
+    chartData,
+    isLoadingChart,
+    chartError,
     notes: notes.notes,
     notesStatus: notes.notesStatus,
     linkedNotesFileName: notes.linkedNotesFileName,

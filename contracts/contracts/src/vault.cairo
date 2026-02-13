@@ -47,7 +47,7 @@ mod Vault {
     // This is the scale factor for the share units
     const UNIT_ATOMS: u256 = 1000;
 
-    const INITIAL_SHARE_PRICE_SATS: u256 = 1000; // 0.00001 BTC
+    const INITIAL_SHARE_PRICE_SATS: u256 = 1_000_000; // 0.01 BTC
 
     #[storage]
     struct Storage {
