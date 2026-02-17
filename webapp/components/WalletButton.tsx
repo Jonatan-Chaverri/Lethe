@@ -57,7 +57,7 @@ export function WalletButton({
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex items-center gap-2 rounded-full border border-lethe-line bg-lethe-card/90 px-3 py-2 text-sm font-semibold text-lethe-mint transition hover:border-lethe-mint/50"
+          className="inline-flex items-center gap-2 rounded-full border border-[#3b2a11] bg-[#121212] px-3 py-2 text-sm font-semibold text-[#f8b84f] transition hover:border-[#f7931a]/60"
           aria-expanded={open}
           aria-haspopup="menu"
         >
@@ -66,7 +66,7 @@ export function WalletButton({
 
         {open && (
           <div
-            className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-lethe-line bg-lethe-card py-1 shadow-panel"
+            className="absolute right-0 top-full z-10 mt-2 w-44 rounded-xl border border-[#2c2c2c] bg-[#111111] py-1 shadow-panel"
             role="menu"
           >
             <button
@@ -75,7 +75,7 @@ export function WalletButton({
                 onDisconnect();
                 setOpen(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-lethe-rose transition hover:bg-lethe-steel/40"
+              className="w-full px-3 py-2 text-left text-sm text-[#ff9187] transition hover:bg-[#1f1f1f]"
               role="menuitem"
             >
               Disconnect
@@ -97,7 +97,7 @@ export function WalletButton({
         type="button"
         onClick={onConnect}
         disabled={isConnecting}
-        className="rounded-full bg-lethe-amber px-4 py-2 text-sm font-semibold text-lethe-ink transition hover:-translate-y-0.5 hover:bg-[#ffc455] disabled:translate-y-0 disabled:opacity-70"
+        className="rounded-full bg-gradient-to-r from-[#f7931a] to-[#ffb347] px-4 py-2 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:opacity-70"
       >
         {isConnecting ? "Connecting…" : "Connect Wallet"}
       </button>

@@ -9,15 +9,14 @@ import { useWBTC } from "@/hooks/useWBTC";
 import { useDashboardNotes } from "@/hooks/dashboard/useDashboardNotes";
 import { getShareUnitPrice } from "@/lib/api/userPositions";
 import { fetchChartData, type ChartDataPoint, type ChartRange, type ChartInterval } from "@/lib/api/sharePrice";
-import {
-  MIN_DEPOSIT_BTC,
-  MIN_WITHDRAW_BTC,
-  useDashboardProofs,
-} from "@/hooks/dashboard/useDashboardProofs";
-
-export { MIN_DEPOSIT_BTC, MIN_WITHDRAW_BTC };
+import { useDashboardProofs } from "@/hooks/dashboard/useDashboardProofs";
 
 const SATS_PER_BTC = BigInt(100_000_000);
+
+/** Minimum deposit/withdraw in BTC = price of 1 k_unit from getShareUnitPrice. */
+function satsToBtc(sats: bigint): number {
+  return Number(sats) / Number(SATS_PER_BTC);
+}
 
 function toBigIntCandidate(value: unknown): bigint | null {
   if (typeof value === "bigint") return value;
@@ -86,11 +85,19 @@ export function useDashboard() {
 
   const notes = useDashboardNotes();
 
+  const minDepositBtc = useMemo(
+    () => (shareUnitPriceSats === null ? 0.001 : satsToBtc(shareUnitPriceSats)),
+    [shareUnitPriceSats]
+  );
+  const minWithdrawBtc = minDepositBtc;
+
   const proofs = useDashboardProofs({
     wallet,
     account,
     connectWalletWithoutSignature,
     refetchUserPosition,
+    minDepositBtc,
+    minWithdrawBtc,
     getWithdrawableNotes: () => notes.withdrawableNotes,
     onDepositNoteGenerated: (note) => {
       notes.addOrUpdateNote(note);
@@ -275,6 +282,8 @@ export function useDashboard() {
     currentPositionValue: isLoadingSharePrice ? "…" : `${notesPositionBtcDisplay} BTC`,
     allTimeYieldValue: ownedShareUnitsDisplay,
     shareUnitPriceBtcValue: shareUnitPriceBtcDisplay,
+    minDepositBtc,
+    minWithdrawBtc,
     chartRange,
     setChartRange,
     chartData,

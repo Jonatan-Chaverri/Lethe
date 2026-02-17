@@ -2153,7 +2153,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x20980cef20c796d36f5c00cd0e9138c01f99d84e9665e22b0a6af705ba65afd",
+        "0x63fed3a3d47b0feb29f251d327ac5416efb47f8d4720d05bce6165d10bd3aac",
     },
     WBTC: {
       address:

@@ -7,9 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-lethe-line bg-lethe-steel/40 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-lethe-muted">{label}</p>
-      <p className="mt-2 break-all font-mono text-sm text-lethe-text">{value}</p>
+    <div className="rounded-xl border border-[#2c2c2c] bg-[#141414] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#b4b4b4]">{label}</p>
+      <p className="mt-2 break-all font-mono text-sm text-white">{value}</p>
     </div>
   );
 }
@@ -38,10 +38,10 @@ export default function ProfilePage() {
     <main className="min-h-screen px-5 pb-16 pt-24 sm:px-6 sm:pt-28">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-4xl text-lethe-text">My Profile</h1>
+          <h1 className="font-display text-4xl text-white">My Profile</h1>
           <Link
             href="/dashboard"
-            className="rounded-full border border-lethe-line px-4 py-2 text-sm text-lethe-text transition hover:border-lethe-mint/50"
+            className="rounded-full border border-[#3b2a11] bg-[#121212] px-4 py-2 text-sm text-white transition hover:border-[#f7931a]/60"
           >
             Back to dashboard
           </Link>

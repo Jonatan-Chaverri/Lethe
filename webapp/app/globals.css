@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --bg-top: #101f34;
-  --bg-bottom: #080c13;
-  --halo-mint: rgba(126, 240, 199, 0.15);
-  --halo-amber: rgba(244, 178, 58, 0.16);
+  --bg-top: #090909;
+  --bg-bottom: #050505;
+  --halo-amber: rgba(247, 147, 26, 0.18);
+  --halo-gold: rgba(255, 179, 71, 0.12);
 }
 
 * {
@@ -16,10 +16,10 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 12% -5%, var(--halo-mint), transparent 38%),
-    radial-gradient(circle at 86% 12%, var(--halo-amber), transparent 42%),
+    radial-gradient(circle at 12% -5%, var(--halo-amber), transparent 38%),
+    radial-gradient(circle at 86% 12%, var(--halo-gold), transparent 42%),
     linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 68%);
-  color: #f3f7ff;
+  color: #ffffff;
 }
 
 main {
@@ -31,8 +31,8 @@ main::before {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(168, 181, 206, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168, 181, 206, 0.08) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(168, 168, 168, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 168, 168, 0.07) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
 }

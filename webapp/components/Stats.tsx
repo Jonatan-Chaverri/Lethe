@@ -21,41 +21,41 @@ export function Stats({
       label: "Total BTC deposited",
       value: formatBtc(totalBtcDeposited),
       suffix: "BTC",
-      tone: "text-lethe-mint",
+      tone: "text-[#f8b84f]",
     },
     {
       label: "Total BTC yielded",
       value: formatBtc(totalBtcYielded),
       suffix: "BTC",
-      tone: "text-lethe-amber",
+      tone: "text-[#ffb347]",
     },
     {
       label: "Active positions",
       value: activePositions.toLocaleString(),
       suffix: "",
-      tone: "text-lethe-rose",
+      tone: "text-white",
     },
   ] as const;
 
   return (
     <section className="px-4 py-8 sm:py-10">
       <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-3">
-        {items.map(({ label, value, suffix, tone }) => (
+        {/* {items.map(({ label, value, suffix, tone }) => (
           <article
             key={label}
-            className="rounded-2xl border border-lethe-line bg-lethe-card/80 p-6 shadow-panel"
+            className="rounded-2xl border border-[#3b2a11] bg-[#101010]/90 p-6 shadow-panel"
           >
             <p className={`font-mono text-2xl font-semibold sm:text-3xl ${tone}`}>
               {value}
               {suffix && (
-                <span className="ml-1 text-sm font-medium tracking-wide text-lethe-muted">
+                <span className="ml-1 text-sm font-medium tracking-wide text-[#b4b4b4]">
                   {suffix}
                 </span>
               )}
             </p>
-            <p className="mt-2 text-sm text-lethe-muted">{label}</p>
+            <p className="mt-2 text-sm text-[#b4b4b4]">{label}</p>
           </article>
-        ))}
+        ))} */}
       </div>
     </section>
   );

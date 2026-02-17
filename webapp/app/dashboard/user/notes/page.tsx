@@ -36,8 +36,9 @@ function toBigIntCandidate(value: unknown): bigint | null {
 function formatBtcFromSats(value: bigint): string {
   const whole = value / SATS_PER_BTC;
   const fraction = value % SATS_PER_BTC;
-  const paddedFraction = fraction.toString().padStart(8, "0");
-  return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${paddedFraction}`;
+  const trimmedFraction = fraction.toString().padStart(8, "0").replace(/0+$/, "");
+  const wholeFormatted = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return trimmedFraction ? `${wholeFormatted}.${trimmedFraction}` : wholeFormatted;
 }
 
 function getNoteValueSats(note: LetheNote, shareUnitPriceSats: bigint | null): bigint | null {
@@ -149,28 +150,28 @@ export default function UserNotesPage() {
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-4xl text-lethe-text">Saved Notes</h1>
-            <p className="mt-2 text-sm text-lethe-muted">
+            <h1 className="font-display text-4xl text-white">Saved Notes</h1>
+            <p className="mt-2 text-sm text-[#b4b4b4]">
               Current note file:{" "}
-              <span className="font-mono text-lethe-text">{fileName ?? "No file linked"}</span>
+              <span className="font-mono text-white">{fileName ?? "No file linked"}</span>
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="rounded-full border border-lethe-line px-4 py-2 text-sm text-lethe-text transition hover:border-lethe-mint/50"
+            className="rounded-full border border-[#3b2a11] bg-[#121212] px-4 py-2 text-sm text-white transition hover:border-[#f7931a]/60"
           >
             Back to dashboard
           </Link>
         </div>
 
-        <section className="mt-6 rounded-2xl border border-lethe-line bg-lethe-card/90 p-5 shadow-panel">
-          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-lethe-muted">Password</label>
+        <section className="mt-6 rounded-2xl border border-[#3b2a11] bg-[#101010]/95 p-5 shadow-panel">
+          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#b4b4b4]">Password</label>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl border border-lethe-line bg-lethe-steel/50 px-4 py-3 text-sm text-lethe-text placeholder:text-lethe-muted focus:border-lethe-mint focus:outline-none focus:ring-1 focus:ring-lethe-mint"
+              className="w-full rounded-xl border border-[#3b2a11] bg-[#171717] px-4 py-3 text-sm text-white placeholder:text-[#7f7f7f] focus:border-[#f7931a] focus:outline-none focus:ring-1 focus:ring-[#f7931a]"
               placeholder="••••••••"
             />
             <button
@@ -188,12 +189,12 @@ export default function UserNotesPage() {
                 }
               }}
               disabled={isLoading}
-              className="rounded-full bg-lethe-amber px-5 py-3 text-sm font-semibold text-lethe-ink transition hover:bg-[#ffc455] disabled:opacity-60"
+              className="rounded-full bg-gradient-to-r from-[#f7931a] to-[#ffb347] px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110 disabled:opacity-60"
             >
               {isLoading ? "Loading..." : "Load notes"}
             </button>
           </div>
-          {status && <p className="mt-3 text-xs text-lethe-muted">{status}</p>}
+          {status && <p className="mt-3 text-xs text-[#b4b4b4]">{status}</p>}
           {error && (
             <p className="mt-3 text-sm text-lethe-rose" role="alert">
               {error}
@@ -203,8 +204,8 @@ export default function UserNotesPage() {
 
         <section className="mt-6 grid gap-3">
           {notes.length === 0 ? (
-            <div className="rounded-2xl border border-lethe-line bg-lethe-card/70 p-5">
-              <p className="text-sm text-lethe-muted">No notes loaded.</p>
+            <div className="rounded-2xl border border-[#2c2c2c] bg-[#121212]/80 p-5">
+              <p className="text-sm text-[#b4b4b4]">No notes loaded.</p>
             </div>
           ) : (
             notes.map((note) => {
@@ -212,26 +213,26 @@ export default function UserNotesPage() {
               return (
                 <article
                   key={note.commitment}
-                  className="relative rounded-2xl border border-lethe-line bg-lethe-card/80 p-4 pb-14 shadow-panel"
+                  className="relative rounded-2xl border border-[#2c2c2c] bg-[#121212]/85 p-4 pb-14 shadow-panel"
                 >
                   <div className="grid gap-2 text-xs sm:grid-cols-2">
-                    <p className="text-lethe-muted">
-                      Commitment: <span className="font-mono text-lethe-text">{truncateHex(note.commitment)}</span>
+                    <p className="text-[#b4b4b4]">
+                      Commitment: <span className="font-mono text-white">{truncateHex(note.commitment)}</span>
                     </p>
-                    <p className="text-lethe-muted">
-                      Units: <span className="font-mono text-lethe-text">{note.k_units}</span>
+                    <p className="text-[#b4b4b4]">
+                      Units: <span className="font-mono text-white">{note.k_units}</span>
                     </p>
-                    <p className="text-lethe-muted">
-                      Nullifier: <span className="font-mono text-lethe-text">{truncateHex(note.nullifier)}</span>
+                    <p className="text-[#b4b4b4]">
+                      Nullifier: <span className="font-mono text-white">{truncateHex(note.nullifier)}</span>
                     </p>
-                    <p className="text-lethe-muted">
-                      Leaf index: <span className="font-mono text-lethe-text">{note.leaf_index}</span>
+                    <p className="text-[#b4b4b4]">
+                      Leaf index: <span className="font-mono text-white">{note.leaf_index}</span>
                     </p>
-                    <p className="break-all text-lethe-muted">
-                      Secret: <span className="font-mono text-lethe-text">{note.secret}</span>
+                    <p className="break-all text-[#b4b4b4]">
+                      Secret: <span className="font-mono text-white">{note.secret}</span>
                     </p>
                   </div>
-                  <h2 className="absolute bottom-3 right-4 text-right font-display text-xl text-lethe-mint">
+                  <h2 className="absolute bottom-3 right-4 text-right font-display text-xl text-[#f8b84f]">
                     {noteValueSats === null ? "N/A" : `${formatBtcFromSats(noteValueSats)} BTC`}
                   </h2>
                 </article>

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useDashboard, MIN_DEPOSIT_BTC, MIN_WITHDRAW_BTC } from "@/hooks/useDashboard";
+import { useDashboard } from "@/hooks/useDashboard";
 import type { ChartRange } from "@/lib/api/sharePrice";
 
 function truncateAddress(value: string): string {
@@ -50,6 +50,8 @@ export default function DashboardPage() {
     currentPositionValue,
     allTimeYieldValue,
     shareUnitPriceBtcValue,
+    minDepositBtc,
+    minWithdrawBtc,
     chartRange,
     setChartRange,
     chartData,
@@ -381,7 +383,7 @@ export default function DashboardPage() {
             {expandedPanel === "deposit" && (
               <>
                 <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[#b4b4b4]">
-                  Minimum unit: {MIN_DEPOSIT_BTC.toFixed(3)} BTC
+                  Minimum unit: {minDepositBtc.toFixed(6)} BTC
                 </p>
                 <button
                   type="button"
@@ -426,20 +428,22 @@ export default function DashboardPage() {
                     {isLoadingWBTC ? "…" : `${wbtcBalanceDisplay} WBTC`}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => mintTestnetWBTC()}
-                  disabled={isMinting || isLoadingWBTC}
-                  className="mt-3 rounded-full border border-[#f7931a] bg-[#121212] px-4 py-2 text-sm font-semibold text-[#f8b84f] transition hover:bg-[#201507] disabled:opacity-50"
-                >
-                  {isMinting ? "Minting…" : "Mint testnet WBTC"}
-                </button>
+                {process.env.NEXT_PUBLIC_STARKNET_NETWORK === "sepolia" && (
+                  <button
+                    type="button"
+                    onClick={() => mintTestnetWBTC()}
+                    disabled={isMinting || isLoadingWBTC}
+                    className="mt-3 rounded-full border border-[#f7931a] bg-[#121212] px-4 py-2 text-sm font-semibold text-[#f8b84f] transition hover:bg-[#201507] disabled:opacity-50"
+                  >
+                    {isMinting ? "Minting…" : "Mint testnet WBTC"}
+                  </button>
+                )}
                 {wbtcBalanceError && (
                   <p className="mt-2 text-sm text-lethe-rose" role="alert">
                     {wbtcBalanceError}
                   </p>
                 )}
-                {wbtcMintError && (
+                {process.env.NEXT_PUBLIC_STARKNET_NETWORK === "sepolia" && wbtcMintError && (
                   <p className="mt-2 text-sm text-lethe-rose" role="alert">
                     {wbtcMintError}
                   </p>
@@ -481,7 +485,7 @@ export default function DashboardPage() {
                     className="mt-2 w-full rounded-xl border border-[#3b2a11] bg-[#171717] px-4 py-3 font-mono text-white placeholder:text-[#7f7f7f] focus:border-[#f7931a] focus:outline-none focus:ring-1 focus:ring-[#f7931a]"
                     autoFocus
                   />
-                  <p className="mt-2 text-xs text-[#b4b4b4]">Min: {MIN_DEPOSIT_BTC.toFixed(3)} BTC</p>
+                  <p className="mt-2 text-xs text-[#b4b4b4]">Min: {minDepositBtc.toFixed(6)} BTC</p>
                   {depositAmountError && (
                     <p className="mt-2 text-sm text-lethe-rose" role="alert">
                       {depositAmountError}
@@ -564,7 +568,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <p className="mt-4 text-xs uppercase tracking-[0.12em] text-[#b4b4b4]">
-                  Minimum unit: {MIN_WITHDRAW_BTC.toFixed(3)} BTC
+                  Minimum unit: {minWithdrawBtc.toFixed(6)} BTC
                 </p>
                 <button
                   type="button"
@@ -596,10 +600,10 @@ export default function DashboardPage() {
                 >
                   <h3 className="font-display text-xl text-white">Withdraw WBTC</h3>
                   <p className="mt-2 text-sm text-[#c9c9c9]">
-                    Enter the amount in BTC (e.g. 0.001 or 0.5).
+                    Enter the amount in WBTC (e.g. 0.001 or 0.5).
                   </p>
                   <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-[#b4b4b4]">
-                    Amount (BTC)
+                    Amount (WBTC)
                   </label>
                   <input
                     type="text"
@@ -610,7 +614,7 @@ export default function DashboardPage() {
                     className="mt-2 w-full rounded-xl border border-[#3b2a11] bg-[#171717] px-4 py-3 font-mono text-white placeholder:text-[#7f7f7f] focus:border-[#f7931a] focus:outline-none focus:ring-1 focus:ring-[#f7931a]"
                     autoFocus
                   />
-                  <p className="mt-2 text-xs text-[#b4b4b4]">Min: {MIN_WITHDRAW_BTC.toFixed(3)} BTC</p>
+                  <p className="mt-2 text-xs text-[#b4b4b4]">Min: {minWithdrawBtc.toFixed(6)} BTC</p>
                   {withdrawAmountError && (
                     <p className="mt-2 text-sm text-lethe-rose" role="alert">
                       {withdrawAmountError}

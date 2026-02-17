@@ -56,9 +56,14 @@ export async function fetchChartData(
   const to = new Date();
   const from = new Date(to.getTime() - rangeMs);
 
-  const prices = await sharePriceDbService.findByTimeRange(from, to);
+  let prices = await sharePriceDbService.findByTimeRange(from, to);
+
+  // When no prices in range (e.g. 1d but last price was a week ago),
+  // use the latest price as the current price for the entire range
   if (prices.length === 0) {
-    return [];
+    const latest = await sharePriceDbService.getLatest();
+    if (!latest) return [];
+    prices = [latest];
   }
 
   const dataPoints: ChartDataPoint[] = [];

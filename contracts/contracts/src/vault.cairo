@@ -205,7 +205,8 @@ mod Vault {
                 return (INITIAL_SHARE_PRICE_SATS * k_units) / UNIT_ATOMS;
             }
             let wbtc_in_contract = self.get_total_assets();
-            wbtc_in_contract * k_units / total_shares_in_k_units
+            let unit_price = wbtc_in_contract / total_shares_in_k_units;
+            unit_price * k_units
         }
 
         fn get_total_assets(self: @ContractState) -> u256 {

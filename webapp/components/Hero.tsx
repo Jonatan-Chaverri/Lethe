@@ -9,21 +9,21 @@ export function Hero({ onTryDemo }: HeroProps) {
     <section className="relative px-4 pb-20 pt-28 sm:pt-36">
       <div className="mx-auto max-w-5xl">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="inline-flex items-center rounded-full border border-lethe-line bg-lethe-card/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-lethe-mint">
+          <p className="inline-flex items-center rounded-full border border-[#3b2a11] bg-[#121212]/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#f8b84f]">
             Starknet-native private yield
           </p>
-          <h1 className="mt-6 font-display text-5xl font-semibold leading-[0.95] text-lethe-text sm:text-6xl md:text-7xl">
+          <h1 className="mt-6 font-display text-5xl font-semibold leading-[0.95] text-white sm:text-6xl md:text-7xl">
             Keep Your Bitcoin Yield
-            <span className="block text-lethe-amber">Invisible to Everyone Else</span>
+            <span className="block text-[#f8b84f]">Invisible to Everyone Else</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-lethe-muted sm:text-lg">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#c9c9c9] sm:text-lg">
             Lethe turns wBTC deposits into private notes. You accrue yield publicly, but positions and spend paths stay hidden behind zero-knowledge proofs.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <button
               type="button"
               onClick={onTryDemo}
-              className="rounded-full bg-lethe-mint px-6 py-3 text-sm font-semibold text-lethe-ink transition hover:-translate-y-0.5 hover:bg-[#93ffd8]"
+              className="rounded-full bg-gradient-to-r from-[#f7931a] to-[#ffb347] px-6 py-3 text-sm font-semibold text-black transition hover:-translate-y-0.5 hover:brightness-110"
             >
               Connect Wallet
             </button>
@@ -47,9 +47,9 @@ interface FeatureProps {
 
 function Feature({ title, body }: FeatureProps) {
   return (
-    <article className="animate-float rounded-2xl border border-lethe-line bg-lethe-card/70 p-5 shadow-glow [animation-delay:180ms]">
-      <h3 className="font-display text-2xl text-lethe-text">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-lethe-muted">{body}</p>
+    <article className="animate-float rounded-2xl border border-[#3b2a11] bg-[#121212]/80 p-5 shadow-panel [animation-delay:180ms]">
+      <h3 className="font-display text-2xl text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[#c9c9c9]">{body}</p>
     </article>
   );
 }

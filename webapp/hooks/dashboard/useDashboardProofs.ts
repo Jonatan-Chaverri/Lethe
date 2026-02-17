@@ -14,9 +14,6 @@ import {
 } from "@/lib/noir/proofService";
 import type { LetheNote } from "@/lib/notes/secureNotes";
 
-export const MIN_DEPOSIT_BTC = 0.001;
-export const MIN_WITHDRAW_BTC = 0.001;
-
 function btcToUnits(btcStr: string): number {
   const n = parseFloat(btcStr);
   if (!Number.isFinite(n) || n < 0) return 0;
@@ -31,6 +28,8 @@ interface UseDashboardProofsParams {
     account?: AccountInterface | null;
   }>;
   refetchUserPosition: () => Promise<unknown>;
+  minDepositBtc: number;
+  minWithdrawBtc: number;
   getWithdrawableNotes: () => LetheNote[];
   onDepositNoteGenerated: (note: LetheNote) => void;
   onDepositLeafIndexResolved: (commitment: string, leafIndex: number) => void;
@@ -45,6 +44,8 @@ export function useDashboardProofs({
   account,
   connectWalletWithoutSignature,
   refetchUserPosition,
+  minDepositBtc,
+  minWithdrawBtc,
   getWithdrawableNotes,
   onDepositNoteGenerated,
   onDepositLeafIndexResolved,
@@ -241,8 +242,8 @@ export function useDashboardProofs({
       return;
     }
     const amountBtc = parseFloat(trimmed);
-    if (!Number.isFinite(amountBtc) || amountBtc < MIN_DEPOSIT_BTC) {
-      setDepositAmountError(`Minimum deposit is ${MIN_DEPOSIT_BTC.toFixed(3)} BTC`);
+    if (!Number.isFinite(amountBtc) || amountBtc < minDepositBtc) {
+      setDepositAmountError(`Minimum deposit is ${minDepositBtc.toFixed(6)} BTC`);
       return;
     }
 
@@ -313,8 +314,8 @@ export function useDashboardProofs({
       return;
     }
     const amountBtc = parseFloat(trimmed);
-    if (!Number.isFinite(amountBtc) || amountBtc < MIN_WITHDRAW_BTC) {
-      setWithdrawAmountError(`Minimum withdraw is ${MIN_WITHDRAW_BTC.toFixed(3)} BTC`);
+    if (!Number.isFinite(amountBtc) || amountBtc < minWithdrawBtc) {
+      setWithdrawAmountError(`Minimum withdraw is ${minWithdrawBtc.toFixed(6)} BTC`);
       return;
     }
     const amountUnits = btcToUnits(trimmed);
