@@ -10,6 +10,7 @@ import { requestId } from "./middleware/requestId";
 import { onChainRoutes } from "./routes/onChainRoutes";
 import { userPositionsRoutes } from "./routes/userPositionsRoutes";
 import { sharePriceRoutes } from "./routes/sharePriceRoutes";
+import { env } from "./lib/env";
 
 function allowedOrigin(
   requestOrigin: string | undefined,
@@ -23,7 +24,12 @@ function allowedOrigin(
     const url = new URL(requestOrigin);
     const isLocalhost =
       url.hostname === "localhost" || url.hostname === "127.0.0.1";
-    callback(null, isLocalhost);
+    const normalizedOrigin = url.origin.toLowerCase();
+    const configured = env.corsAllowedOrigins.some(
+      (origin) => origin.toLowerCase() === normalizedOrigin
+    );
+    const isVercel = url.hostname.endsWith(".vercel.app");
+    callback(null, isLocalhost || configured || isVercel);
   } catch {
     callback(null, false);
   }

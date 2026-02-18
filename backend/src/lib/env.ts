@@ -36,4 +36,8 @@ export const env = {
   authAccessTokenTtl: process.env.AUTH_ACCESS_TOKEN_TTL || "15m",
   authRefreshTokenTtl: process.env.AUTH_REFRESH_TOKEN_TTL || "30d",
   authSigninMessage: process.env.AUTH_SIGNIN_MESSAGE || "Lethe login",
+  corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean),
 };
