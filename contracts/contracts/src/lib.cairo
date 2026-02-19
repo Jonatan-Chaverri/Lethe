@@ -1,6 +1,7 @@
 mod merkle_tree;
 mod nullifier_registry;
 mod verifier;
+mod vessu_strategy;
 mod vault;
 
 mod mocks {
