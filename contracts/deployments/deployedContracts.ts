@@ -7,7 +7,7 @@ const deployedContracts = {
   sepolia: {
     Vault: {
       address:
-        "0x60d8567537f92fc32fb103d6d3776c87fcc855b321dd9840312df663ff2efa0",
+        "0x6cd0ab50ad748d609b76504b584e292f8245d5c5b0eb66b29df1624168c7697",
       abi: [
         {
           type: "impl",
@@ -301,6 +301,10 @@ const deployedContracts = {
               type: "core::starknet::contract_address::ContractAddress",
             },
             {
+              name: "vesu_strategy",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
               name: "wbtc",
               type: "core::starknet::contract_address::ContractAddress",
             },
@@ -480,7 +484,7 @@ const deployedContracts = {
         },
       ],
       classHash:
-        "0x63fed3a3d47b0feb29f251d327ac5416efb47f8d4720d05bce6165d10bd3aac",
+        "0x321de5d0e321f386a9e2acaa697b108993634da076dfcbac356164074cf20d6",
     },
   },
 } as const;

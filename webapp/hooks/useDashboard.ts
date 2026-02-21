@@ -327,5 +327,6 @@ export function useDashboard() {
     handleConfirmDepositAmount: proofs.handleConfirmDepositAmount,
     handleConfirmWithdrawAmount: proofs.handleConfirmWithdrawAmount,
     depositModalStatus: proofs.depositModalStatus,
+    depositModalProgress: proofs.depositModalProgress,
   };
 }

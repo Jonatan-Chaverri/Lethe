@@ -202,7 +202,7 @@ export class ChainEventsClient {
             logger.info(`latest block: ${latest}`);
             const block = await this.provider.getEvents({
                 address: contractAddress,
-                from_block: { block_number: fromBlock + 1 },
+                from_block: { block_number: fromBlock},
                 to_block: { block_number: latest },
                 chunk_size: 1000,
                 continuation_token: continuation_token,
@@ -210,6 +210,8 @@ export class ChainEventsClient {
             const events = block.events;
             if (block.continuation_token) {
                 eventsFound.push(...events);
+                // wait for 5 seconds so we don't spam the API
+                await new Promise(resolve => setTimeout(resolve, 5000));
                 return this.getContractEvents(contractAddress, fromBlock + 1000, eventsFound, block.continuation_token);
             }
             return new EventsParser(events, false, BigInt(latest), '');

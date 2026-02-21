@@ -16,6 +16,7 @@ pub trait IVault<ContractState> {
 
 #[starknet::contract]
 mod Vault {
+    use contracts::vessu_strategy::{IVesuStrategyDispatcher, IVesuStrategyDispatcherTrait};
     use contracts::nullifier_registry::{INullifierRegistryDispatcher, INullifierRegistryDispatcherTrait};
     use contracts::merkle_tree::{IMerkleTreeDispatcher, IMerkleTreeDispatcherTrait};
     use contracts::verifier::{IVerifierDispatcher, IVerifierDispatcherTrait};
@@ -62,6 +63,7 @@ mod Vault {
         nullifier_registry_address: ContractAddress,
         deposit_verifier_address: ContractAddress,
         withdraw_verifier_address: ContractAddress,
+        vesu_strategy_address: ContractAddress,
         wbtc_contract: IERC20Dispatcher,
     }
 
@@ -84,6 +86,7 @@ mod Vault {
         merkle_tree: ContractAddress,
         deposit_verifier: ContractAddress,
         withdraw_verifier: ContractAddress,
+        vesu_strategy: ContractAddress,
         wbtc: ContractAddress,
     ) {
         self.accesscontrol.initializer();
@@ -93,7 +96,7 @@ mod Vault {
         self.wbtc_contract.write(IERC20Dispatcher {contract_address: wbtc});
         self.deposit_verifier_address.write(deposit_verifier);
         self.withdraw_verifier_address.write(withdraw_verifier);
-
+        self.vesu_strategy_address.write(vesu_strategy);
         self.total_shares.write(0);
     }
 
@@ -132,6 +135,10 @@ mod Vault {
                 get_caller_address(), get_contract_address(), k_units_price
             );
 
+            // deposit 10% of the wbtc to vesu
+            let ten_percent_of_wbtc = k_units_price * 10 / 100;
+            self.deposit_vesu_assets(ten_percent_of_wbtc);
+
             total_shares_in_k_units = total_shares_in_k_units + k_units;
             self.total_shares.write(total_shares_in_k_units);
 
@@ -156,8 +163,6 @@ mod Vault {
             assert(self.is_valid_root(root_raw), 'Invalid root');
             assert(w_units > 0, 'w units less than 0');
 
-            self.mark_nullifier_as_spent(nullifier_hash);
-
             let total_shares_in_k_units = self.total_shares.read();
 
             assert(w_units <= total_shares_in_k_units, 'Not enough shares to withdraw');
@@ -165,9 +170,8 @@ mod Vault {
 
             self.total_shares.write(total_shares_in_k_units - w_units);
 
-            self.wbtc_contract.read().transfer(
-                recipient, payout
-            );
+            self.payout_assets(payout, recipient);
+            self.mark_nullifier_as_spent(nullifier_hash);
 
             if (w_units < k_units) {
                 // Mint a new commitment for the remaining shares
@@ -209,10 +213,16 @@ mod Vault {
             unit_price * k_units
         }
 
-        fn get_total_assets(self: @ContractState) -> u256 {
+        fn get_total_available_assets(self: @ContractState) -> u256 {
             let token_holder = get_contract_address();
             let amount_tokens = self.wbtc_contract.read().balance_of(token_holder);
             amount_tokens
+        }
+
+        fn get_total_assets(self: @ContractState) -> u256 {
+            let total_available_assets = self.get_total_available_assets();
+            let total_vesu_assets = self.get_vesu_assets();
+            total_available_assets + total_vesu_assets
         }
 
         fn insert_commitment(ref self: ContractState, commitment: u256) {
@@ -260,7 +270,43 @@ mod Vault {
             assert(result.is_ok(), 'Withdraw proof is invalid');
             return result.unwrap();
         }
-        
+
+        fn get_vesu_assets(self: @ContractState) -> u256 {
+            let vesu_strategy = IVesuStrategyDispatcher {
+                contract_address: self.vesu_strategy_address.read(),
+            };
+            vesu_strategy.get_total_locked_assets()
+        }
+
+        fn deposit_vesu_assets(ref self: ContractState, amount_assets: u256) {
+            let vesu_strategy_address = self.vesu_strategy_address.read();
+            let vesu_strategy = IVesuStrategyDispatcher {
+                contract_address: vesu_strategy_address,
+            };
+            // we need to sent the tokens first to vesu strategy so it can deposit them
+            self.wbtc_contract.read().transfer(vesu_strategy_address, amount_assets);
+            vesu_strategy.deposit_assets(amount_assets);
+        }
+
+        fn withdraw_vesu_assets(ref self: ContractState, amount_assets: u256) {
+            let vesu_strategy = IVesuStrategyDispatcher {
+                contract_address: self.vesu_strategy_address.read(),
+            };
+            vesu_strategy.withdraw_assets(amount_assets);
+        }
+
+        fn payout_assets(ref self: ContractState, amount_assets: u256, recipient: ContractAddress) {
+            let total_assets = self.get_total_assets();
+            assert(amount_assets <= total_assets, 'Not enough assets to payout');
+            let mut total_available_assets = self.get_total_available_assets();
+            if (amount_assets > total_available_assets) {
+                // this should sent tokens to vault so, after we updated available assets
+                self.withdraw_vesu_assets(amount_assets - total_available_assets);
+                total_available_assets = self.get_total_available_assets();
+            }
+            assert(total_available_assets >= amount_assets, 'Not enough assets to payout');
+            self.wbtc_contract.read().transfer(recipient, amount_assets);
+        }
     }
 
 }

@@ -7,7 +7,7 @@ const deployedContracts = {
   sepolia: {
     MerkleTree: {
       address:
-        "0x28bb607d71cd5409c6db422c17eb06cf1fc285fdcf353bbf114d75a4b9e75d7",
+        "0xd019a3304c56afd73aa03b7686d4e07d5d7a3a58f4526dc7c8f5c174f13de3",
       abi: [
         {
           type: "impl",
@@ -453,7 +453,7 @@ const deployedContracts = {
     },
     NullifierRegistry: {
       address:
-        "0x7a3efa36f57a86dc1b034062781882594faffbc8672552d76d4317d9e31d21c",
+        "0x4d22e3a5584cfd850295802f6ce58e7e90125bebfb9743533790221b2fa4afc",
       abi: [
         {
           type: "impl",
@@ -868,6 +868,1381 @@ const deployedContracts = {
       ],
       classHash:
         "0xf05b4f9d76a0e9f51075a7f30440dcdefe28da6bdb8dc2dbf7b257abd39518",
+    },
+    MockVToken: {
+      address:
+        "0x346edbda988795ade63ed341e6d947a6bb411af8eb11cfd31e664e311d7d18d",
+      abi: [
+        {
+          type: "impl",
+          name: "MockVTokenImpl",
+          interface_name: "contracts::mocks::mock_v_token::IMockVToken",
+        },
+        {
+          type: "struct",
+          name: "core::integer::u256",
+          members: [
+            {
+              name: "low",
+              type: "core::integer::u128",
+            },
+            {
+              name: "high",
+              type: "core::integer::u128",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "contracts::mocks::mock_v_token::IMockVToken",
+          items: [
+            {
+              type: "function",
+              name: "convert_to_assets",
+              inputs: [
+                {
+                  name: "shares",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "deposit",
+              inputs: [
+                {
+                  name: "assets",
+                  type: "core::integer::u256",
+                },
+                {
+                  name: "receiver",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "withdraw",
+              inputs: [
+                {
+                  name: "assets",
+                  type: "core::integer::u256",
+                },
+                {
+                  name: "receiver",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "owner",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "ERC20MixinImpl",
+          interface_name: "openzeppelin_interfaces::token::erc20::IERC20Mixin",
+        },
+        {
+          type: "enum",
+          name: "core::bool",
+          variants: [
+            {
+              name: "False",
+              type: "()",
+            },
+            {
+              name: "True",
+              type: "()",
+            },
+          ],
+        },
+        {
+          type: "struct",
+          name: "core::byte_array::ByteArray",
+          members: [
+            {
+              name: "data",
+              type: "core::array::Array::<core::bytes_31::bytes31>",
+            },
+            {
+              name: "pending_word",
+              type: "core::felt252",
+            },
+            {
+              name: "pending_word_len",
+              type: "core::internal::bounded_int::BoundedInt::<0, 30>",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::token::erc20::IERC20Mixin",
+          items: [
+            {
+              type: "function",
+              name: "total_supply",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "balance_of",
+              inputs: [
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "allowance",
+              inputs: [
+                {
+                  name: "owner",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "spender",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "transfer",
+              inputs: [
+                {
+                  name: "recipient",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "transfer_from",
+              inputs: [
+                {
+                  name: "sender",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "recipient",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "approve",
+              inputs: [
+                {
+                  name: "spender",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "name",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::byte_array::ByteArray",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "symbol",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::byte_array::ByteArray",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "decimals",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u8",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "totalSupply",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "balanceOf",
+              inputs: [
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "transferFrom",
+              inputs: [
+                {
+                  name: "sender",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "recipient",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "constructor",
+          name: "constructor",
+          inputs: [
+            {
+              name: "asset",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_token::erc20::erc20::ERC20Component::Transfer",
+          kind: "struct",
+          members: [
+            {
+              name: "from",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "to",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "value",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_token::erc20::erc20::ERC20Component::Approval",
+          kind: "struct",
+          members: [
+            {
+              name: "owner",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "spender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "key",
+            },
+            {
+              name: "value",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_token::erc20::erc20::ERC20Component::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "Transfer",
+              type: "openzeppelin_token::erc20::erc20::ERC20Component::Transfer",
+              kind: "nested",
+            },
+            {
+              name: "Approval",
+              type: "openzeppelin_token::erc20::erc20::ERC20Component::Approval",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::mocks::mock_v_token::MockVToken::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "ERC20Event",
+              type: "openzeppelin_token::erc20::erc20::ERC20Component::Event",
+              kind: "flat",
+            },
+          ],
+        },
+      ],
+      classHash:
+        "0x528a2cd1997a64f49e1c777d6be3d89ffe6bd9e2d6a0daeea6234debd1a5a95",
+    },
+    VesuStrategy: {
+      address:
+        "0x2d5dad3edab123f13a5a3666667cf2cd901ee4a54175f30474592eef2197376",
+      abi: [
+        {
+          type: "impl",
+          name: "VesuStrategyImpl",
+          interface_name: "contracts::vessu_strategy::IVesuStrategy",
+        },
+        {
+          type: "struct",
+          name: "core::integer::u256",
+          members: [
+            {
+              name: "low",
+              type: "core::integer::u128",
+            },
+            {
+              name: "high",
+              type: "core::integer::u128",
+            },
+          ],
+        },
+        {
+          type: "enum",
+          name: "core::bool",
+          variants: [
+            {
+              name: "False",
+              type: "()",
+            },
+            {
+              name: "True",
+              type: "()",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "contracts::vessu_strategy::IVesuStrategy",
+          items: [
+            {
+              type: "function",
+              name: "set_vault_address",
+              inputs: [
+                {
+                  name: "vault",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "get_total_locked_assets",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "deposit_assets",
+              inputs: [
+                {
+                  name: "amount_assets",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "withdraw_assets",
+              inputs: [
+                {
+                  name: "amount_assets",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "rescue_tokens",
+              inputs: [
+                {
+                  name: "token",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "to",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+                {
+                  name: "amount",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "is_configured",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_pool",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_asset",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_v_token",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              state_mutability: "view",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "SRC5Impl",
+          interface_name: "openzeppelin_interfaces::introspection::ISRC5",
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::introspection::ISRC5",
+          items: [
+            {
+              type: "function",
+              name: "supports_interface",
+              inputs: [
+                {
+                  name: "interface_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "view",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "AccessControlImpl",
+          interface_name:
+            "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
+          items: [
+            {
+              type: "function",
+              name: "has_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_role_admin",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::felt252",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "grant_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "revoke_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "renounce_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "constructor",
+          name: "constructor",
+          inputs: [
+            {
+              name: "admin",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "pool",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "v_token",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "asset",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_introspection::src5::SRC5Component::Event",
+          kind: "enum",
+          variants: [],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "delay",
+              type: "core::integer::u64",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "previous_admin_role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "new_admin_role",
+              type: "core::felt252",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "RoleGranted",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+              kind: "nested",
+            },
+            {
+              name: "RoleGrantedWithDelay",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+              kind: "nested",
+            },
+            {
+              name: "RoleRevoked",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+              kind: "nested",
+            },
+            {
+              name: "RoleAdminChanged",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::vessu_strategy::VesuStrategy::Deposited",
+          kind: "struct",
+          members: [
+            {
+              name: "amount",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::vessu_strategy::VesuStrategy::Withdrawn",
+          kind: "struct",
+          members: [
+            {
+              name: "amount",
+              type: "core::integer::u256",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::vessu_strategy::VesuStrategy::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "SRC5Event",
+              type: "openzeppelin_introspection::src5::SRC5Component::Event",
+              kind: "flat",
+            },
+            {
+              name: "AccessControlEvent",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+              kind: "flat",
+            },
+            {
+              name: "Deposited",
+              type: "contracts::vessu_strategy::VesuStrategy::Deposited",
+              kind: "nested",
+            },
+            {
+              name: "Withdrawn",
+              type: "contracts::vessu_strategy::VesuStrategy::Withdrawn",
+              kind: "nested",
+            },
+          ],
+        },
+      ],
+      classHash:
+        "0x2f13732c4be40986e0291e7e36c5a136cfb46404e9abbaa9a586ffa9484c4a",
+    },
+    Vault: {
+      address:
+        "0x6cd0ab50ad748d609b76504b584e292f8245d5c5b0eb66b29df1624168c7697",
+      abi: [
+        {
+          type: "impl",
+          name: "VaultImpl",
+          interface_name: "contracts::vault::IVault",
+        },
+        {
+          type: "struct",
+          name: "core::integer::u256",
+          members: [
+            {
+              name: "low",
+              type: "core::integer::u128",
+            },
+            {
+              name: "high",
+              type: "core::integer::u128",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "contracts::vault::IVault",
+          items: [
+            {
+              type: "function",
+              name: "get_total_shares",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_share_price",
+              inputs: [],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_k_units_price",
+              inputs: [
+                {
+                  name: "k_units",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_purchasable_k_units",
+              inputs: [
+                {
+                  name: "amount_btc",
+                  type: "core::integer::u256",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::integer::u256",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "deposit",
+              inputs: [
+                {
+                  name: "proof",
+                  type: "core::array::Array::<core::felt252>",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "withdraw",
+              inputs: [
+                {
+                  name: "proof",
+                  type: "core::array::Array::<core::felt252>",
+                },
+                {
+                  name: "recipient",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "UpgradeableImpl",
+          interface_name: "openzeppelin_interfaces::upgrades::IUpgradeable",
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::upgrades::IUpgradeable",
+          items: [
+            {
+              type: "function",
+              name: "upgrade",
+              inputs: [
+                {
+                  name: "new_class_hash",
+                  type: "core::starknet::class_hash::ClassHash",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "SRC5Impl",
+          interface_name: "openzeppelin_interfaces::introspection::ISRC5",
+        },
+        {
+          type: "enum",
+          name: "core::bool",
+          variants: [
+            {
+              name: "False",
+              type: "()",
+            },
+            {
+              name: "True",
+              type: "()",
+            },
+          ],
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::introspection::ISRC5",
+          items: [
+            {
+              type: "function",
+              name: "supports_interface",
+              inputs: [
+                {
+                  name: "interface_id",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "view",
+            },
+          ],
+        },
+        {
+          type: "impl",
+          name: "AccessControlImpl",
+          interface_name:
+            "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
+        },
+        {
+          type: "interface",
+          name: "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
+          items: [
+            {
+              type: "function",
+              name: "has_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::bool",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "get_role_admin",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+              ],
+              outputs: [
+                {
+                  type: "core::felt252",
+                },
+              ],
+              state_mutability: "view",
+            },
+            {
+              type: "function",
+              name: "grant_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "revoke_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+            {
+              type: "function",
+              name: "renounce_role",
+              inputs: [
+                {
+                  name: "role",
+                  type: "core::felt252",
+                },
+                {
+                  name: "account",
+                  type: "core::starknet::contract_address::ContractAddress",
+                },
+              ],
+              outputs: [],
+              state_mutability: "external",
+            },
+          ],
+        },
+        {
+          type: "constructor",
+          name: "constructor",
+          inputs: [
+            {
+              name: "admin",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "nullifier_registry",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "merkle_tree",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "deposit_verifier",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "withdraw_verifier",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "vesu_strategy",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+            {
+              name: "wbtc",
+              type: "core::starknet::contract_address::ContractAddress",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_introspection::src5::SRC5Component::Event",
+          kind: "enum",
+          variants: [],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "delay",
+              type: "core::integer::u64",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "account",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+            {
+              name: "sender",
+              type: "core::starknet::contract_address::ContractAddress",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+          kind: "struct",
+          members: [
+            {
+              name: "role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "previous_admin_role",
+              type: "core::felt252",
+              kind: "data",
+            },
+            {
+              name: "new_admin_role",
+              type: "core::felt252",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "RoleGranted",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+              kind: "nested",
+            },
+            {
+              name: "RoleGrantedWithDelay",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+              kind: "nested",
+            },
+            {
+              name: "RoleRevoked",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+              kind: "nested",
+            },
+            {
+              name: "RoleAdminChanged",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
+          kind: "struct",
+          members: [
+            {
+              name: "class_hash",
+              type: "core::starknet::class_hash::ClassHash",
+              kind: "data",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "Upgraded",
+              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
+              kind: "nested",
+            },
+          ],
+        },
+        {
+          type: "event",
+          name: "contracts::vault::Vault::Event",
+          kind: "enum",
+          variants: [
+            {
+              name: "SRC5Event",
+              type: "openzeppelin_introspection::src5::SRC5Component::Event",
+              kind: "flat",
+            },
+            {
+              name: "AccessControlEvent",
+              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+              kind: "flat",
+            },
+            {
+              name: "UpgradeableEvent",
+              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
+              kind: "flat",
+            },
+          ],
+        },
+      ],
+      classHash:
+        "0x775d7a24b10c9330e6632d47424817fdbc180268d751c8fa1ffde7465bb56a4",
     },
     MockWBTC: {
       address:
@@ -1677,483 +3052,6 @@ const deployedContracts = {
       ],
       classHash:
         "0x7b75718243d127c3172ab0b8a18f3ddf520e0bbd3124479d70d43a1ce74db24",
-    },
-    Vault: {
-      address:
-        "0x60d8567537f92fc32fb103d6d3776c87fcc855b321dd9840312df663ff2efa0",
-      abi: [
-        {
-          type: "impl",
-          name: "VaultImpl",
-          interface_name: "contracts::vault::IVault",
-        },
-        {
-          type: "struct",
-          name: "core::integer::u256",
-          members: [
-            {
-              name: "low",
-              type: "core::integer::u128",
-            },
-            {
-              name: "high",
-              type: "core::integer::u128",
-            },
-          ],
-        },
-        {
-          type: "interface",
-          name: "contracts::vault::IVault",
-          items: [
-            {
-              type: "function",
-              name: "get_total_shares",
-              inputs: [],
-              outputs: [
-                {
-                  type: "core::integer::u256",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "get_share_price",
-              inputs: [],
-              outputs: [
-                {
-                  type: "core::integer::u256",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "get_k_units_price",
-              inputs: [
-                {
-                  name: "k_units",
-                  type: "core::integer::u256",
-                },
-              ],
-              outputs: [
-                {
-                  type: "core::integer::u256",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "get_purchasable_k_units",
-              inputs: [
-                {
-                  name: "amount_btc",
-                  type: "core::integer::u256",
-                },
-              ],
-              outputs: [
-                {
-                  type: "core::integer::u256",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "deposit",
-              inputs: [
-                {
-                  name: "proof",
-                  type: "core::array::Array::<core::felt252>",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-            {
-              type: "function",
-              name: "withdraw",
-              inputs: [
-                {
-                  name: "proof",
-                  type: "core::array::Array::<core::felt252>",
-                },
-                {
-                  name: "recipient",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-          ],
-        },
-        {
-          type: "impl",
-          name: "UpgradeableImpl",
-          interface_name: "openzeppelin_interfaces::upgrades::IUpgradeable",
-        },
-        {
-          type: "interface",
-          name: "openzeppelin_interfaces::upgrades::IUpgradeable",
-          items: [
-            {
-              type: "function",
-              name: "upgrade",
-              inputs: [
-                {
-                  name: "new_class_hash",
-                  type: "core::starknet::class_hash::ClassHash",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-          ],
-        },
-        {
-          type: "impl",
-          name: "SRC5Impl",
-          interface_name: "openzeppelin_interfaces::introspection::ISRC5",
-        },
-        {
-          type: "enum",
-          name: "core::bool",
-          variants: [
-            {
-              name: "False",
-              type: "()",
-            },
-            {
-              name: "True",
-              type: "()",
-            },
-          ],
-        },
-        {
-          type: "interface",
-          name: "openzeppelin_interfaces::introspection::ISRC5",
-          items: [
-            {
-              type: "function",
-              name: "supports_interface",
-              inputs: [
-                {
-                  name: "interface_id",
-                  type: "core::felt252",
-                },
-              ],
-              outputs: [
-                {
-                  type: "core::bool",
-                },
-              ],
-              state_mutability: "view",
-            },
-          ],
-        },
-        {
-          type: "impl",
-          name: "AccessControlImpl",
-          interface_name:
-            "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
-        },
-        {
-          type: "interface",
-          name: "openzeppelin_interfaces::access::accesscontrol::IAccessControl",
-          items: [
-            {
-              type: "function",
-              name: "has_role",
-              inputs: [
-                {
-                  name: "role",
-                  type: "core::felt252",
-                },
-                {
-                  name: "account",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [
-                {
-                  type: "core::bool",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "get_role_admin",
-              inputs: [
-                {
-                  name: "role",
-                  type: "core::felt252",
-                },
-              ],
-              outputs: [
-                {
-                  type: "core::felt252",
-                },
-              ],
-              state_mutability: "view",
-            },
-            {
-              type: "function",
-              name: "grant_role",
-              inputs: [
-                {
-                  name: "role",
-                  type: "core::felt252",
-                },
-                {
-                  name: "account",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-            {
-              type: "function",
-              name: "revoke_role",
-              inputs: [
-                {
-                  name: "role",
-                  type: "core::felt252",
-                },
-                {
-                  name: "account",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-            {
-              type: "function",
-              name: "renounce_role",
-              inputs: [
-                {
-                  name: "role",
-                  type: "core::felt252",
-                },
-                {
-                  name: "account",
-                  type: "core::starknet::contract_address::ContractAddress",
-                },
-              ],
-              outputs: [],
-              state_mutability: "external",
-            },
-          ],
-        },
-        {
-          type: "constructor",
-          name: "constructor",
-          inputs: [
-            {
-              name: "admin",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-            {
-              name: "nullifier_registry",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-            {
-              name: "merkle_tree",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-            {
-              name: "deposit_verifier",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-            {
-              name: "withdraw_verifier",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-            {
-              name: "wbtc",
-              type: "core::starknet::contract_address::ContractAddress",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_introspection::src5::SRC5Component::Event",
-          kind: "enum",
-          variants: [],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
-          kind: "struct",
-          members: [
-            {
-              name: "role",
-              type: "core::felt252",
-              kind: "data",
-            },
-            {
-              name: "account",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-            {
-              name: "sender",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
-          kind: "struct",
-          members: [
-            {
-              name: "role",
-              type: "core::felt252",
-              kind: "data",
-            },
-            {
-              name: "account",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-            {
-              name: "sender",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-            {
-              name: "delay",
-              type: "core::integer::u64",
-              kind: "data",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
-          kind: "struct",
-          members: [
-            {
-              name: "role",
-              type: "core::felt252",
-              kind: "data",
-            },
-            {
-              name: "account",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-            {
-              name: "sender",
-              type: "core::starknet::contract_address::ContractAddress",
-              kind: "data",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
-          kind: "struct",
-          members: [
-            {
-              name: "role",
-              type: "core::felt252",
-              kind: "data",
-            },
-            {
-              name: "previous_admin_role",
-              type: "core::felt252",
-              kind: "data",
-            },
-            {
-              name: "new_admin_role",
-              type: "core::felt252",
-              kind: "data",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
-          kind: "enum",
-          variants: [
-            {
-              name: "RoleGranted",
-              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
-              kind: "nested",
-            },
-            {
-              name: "RoleGrantedWithDelay",
-              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
-              kind: "nested",
-            },
-            {
-              name: "RoleRevoked",
-              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
-              kind: "nested",
-            },
-            {
-              name: "RoleAdminChanged",
-              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
-              kind: "nested",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-          kind: "struct",
-          members: [
-            {
-              name: "class_hash",
-              type: "core::starknet::class_hash::ClassHash",
-              kind: "data",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-          kind: "enum",
-          variants: [
-            {
-              name: "Upgraded",
-              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Upgraded",
-              kind: "nested",
-            },
-          ],
-        },
-        {
-          type: "event",
-          name: "contracts::vault::Vault::Event",
-          kind: "enum",
-          variants: [
-            {
-              name: "SRC5Event",
-              type: "openzeppelin_introspection::src5::SRC5Component::Event",
-              kind: "flat",
-            },
-            {
-              name: "AccessControlEvent",
-              type: "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
-              kind: "flat",
-            },
-            {
-              name: "UpgradeableEvent",
-              type: "openzeppelin_upgrades::upgradeable::UpgradeableComponent::Event",
-              kind: "flat",
-            },
-          ],
-        },
-      ],
-      classHash:
-        "0x63fed3a3d47b0feb29f251d327ac5416efb47f8d4720d05bce6165d10bd3aac",
     },
     WBTC: {
       address:

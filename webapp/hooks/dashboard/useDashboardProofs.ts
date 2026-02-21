@@ -96,54 +96,6 @@ export function useDashboardProofs({
     }[],
     feeEstimate?: any
   ): Promise<{ transaction_hash: string }> => {
-    const MIN_L2_GAS_AMOUNT = BigInt("2200000000");
-    const MIN_L2_GAS_PRICE = BigInt("20000000000");
-    const SCALE_NUM = BigInt(150);
-    const SCALE_DEN = BigInt(100);
-
-    const estimatedOverallFee =
-      asBigInt(feeEstimate?.overall_fee) ?? asBigInt(feeEstimate?.overallFee) ?? null;
-
-    const rb = feeEstimate?.resource_bounds ?? feeEstimate?.resourceBounds;
-    const l2Gas = rb?.l2_gas ?? rb?.l2Gas;
-    const estimatedL2Gas =
-      asBigInt(l2Gas?.max_amount) ?? asBigInt(l2Gas?.maxAmount) ?? null;
-    const estimatedL2GasPrice =
-      asBigInt(l2Gas?.max_price_per_unit) ??
-      asBigInt(l2Gas?.maxPricePerUnit) ??
-      null;
-
-    const scaledEstimatedL2Gas =
-      estimatedL2Gas !== null ? (estimatedL2Gas * SCALE_NUM) / SCALE_DEN : null;
-    const scaledEstimatedL2GasPrice =
-      estimatedL2GasPrice !== null ? (estimatedL2GasPrice * SCALE_NUM) / SCALE_DEN : null;
-
-    const maxL2Gas =
-      scaledEstimatedL2Gas !== null && scaledEstimatedL2Gas > MIN_L2_GAS_AMOUNT
-        ? scaledEstimatedL2Gas
-        : MIN_L2_GAS_AMOUNT;
-    const maxL2GasPrice =
-      scaledEstimatedL2GasPrice !== null && scaledEstimatedL2GasPrice > MIN_L2_GAS_PRICE
-        ? scaledEstimatedL2GasPrice
-        : MIN_L2_GAS_PRICE;
-
-    const minFeeFromBounds = maxL2Gas * maxL2GasPrice;
-    const scaledOverallFee =
-      estimatedOverallFee !== null ? (estimatedOverallFee * SCALE_NUM) / SCALE_DEN : null;
-    const maxFeeValue =
-      scaledOverallFee !== null && scaledOverallFee > minFeeFromBounds
-        ? scaledOverallFee
-        : minFeeFromBounds;
-
-    const details = {
-      version: ETransactionVersion.V3,
-      resourceBounds: {
-        l2_gas: { max_amount: maxL2Gas, max_price_per_unit: maxL2GasPrice },
-        l1_gas: { max_amount: BigInt("0x1000000"), max_price_per_unit: BigInt("0x1") },
-        l1_data_gas: { max_amount: BigInt("0x1000000"), max_price_per_unit: BigInt("0x1") },
-      },
-      maxFee: maxFeeValue,
-    };
 
     const executeCalls = calls.map((call) => ({
       contractAddress: call.contract_address,
@@ -152,20 +104,14 @@ export function useDashboardProofs({
       
     }));
 
-    if (connection.account) {
-      const executeResult = await connection.account.execute(executeCalls, details);
-      if (executeResult?.transaction_hash) {
-        console.log("invoke route: connector.account.execute");
-        return { transaction_hash: executeResult.transaction_hash };
-      }
-      if ((executeResult as any)?.transactionHash) {
-        console.log("invoke route: connector.account.execute");
-        return { transaction_hash: (executeResult as any).transactionHash };
-      }
-      throw new Error("connector.account.execute did not return transaction hash");
-    }
+      const result = await connection.wallet.request({
+        type: "wallet_addInvokeTransaction",
+          params: {
+            calls
+          },
+      })
 
-    throw new Error("No AccountInterface available. Reconnect wallet to execute with tx options.");
+      return {transaction_hash: result.transaction_hash};
   };
 
   const [depositProof, setDepositProof] = useState<CircuitProofResult | null>(null);
@@ -178,8 +124,9 @@ export function useDashboardProofs({
   const [withdrawAmountOpen, setWithdrawAmountOpen] = useState(false);
   const [withdrawAmountInput, setWithdrawAmountInput] = useState("");
   const [withdrawAmountError, setWithdrawAmountError] = useState<string | null>(null);
-  const [depositModalStatus, setDepositModalStatus] = useState<"pending" | "success" | null>(null);
-  const [withdrawModalStatus, setWithdrawModalStatus] = useState<"pending" | "success" | null>(null);
+  const [depositModalStatus, setDepositModalStatus] = useState<"proof" | "approve" | "success" | null>(null);
+  const [depositModalProgress, setDepositModalProgress] = useState<string | null>(null);
+  const [withdrawModalStatus, setWithdrawModalStatus] = useState<"proof" | "approve" | "success" | null>(null);
   const [withdrawModalProgress, setWithdrawModalProgress] = useState<string | null>(null);
 
   const handleOpenDepositAmount = () => {
@@ -257,22 +204,28 @@ export function useDashboardProofs({
     setProofError(null);
     onBeforeDepositStart();
     setActiveProof("deposit");
-    setDepositModalStatus("pending");
+    setDepositModalStatus("proof");
+    setDepositModalProgress("Generating zero-knowledge proof...");
 
     try {
       const purchasableUnits = await getPurchasableUnits(amountUnits);
       const result = await generateDepositProof(Number(purchasableUnits));
+      setDepositModalStatus("approve");
+      setDepositModalProgress("Proof ready. Approve transaction in your wallet.");
       const { transactions, deposit_fee } = await deposit(result.proofHex, result.publicInputs, amountUnits);
 
       const connection = await resolveWallet();
       if (!connection) {
         setProofError("Wallet not connected. Please connect your wallet to execute the deposit.");
         setDepositModalStatus(null);
+        setDepositModalProgress(null);
         return;
       }
 
+
       const depositCalls = getCallsFromTransactions(transactions);
       const { transaction_hash } = await sendInvokeWithBackendFee(connection, depositCalls, deposit_fee);
+      setDepositModalProgress("Transaction submitted. Waiting for finalization...");
 
       await new Promise((resolve) => setTimeout(resolve, 5000));
       const callbackResult = await depositCallback(transaction_hash, amountUnits);
@@ -290,11 +243,16 @@ export function useDashboardProofs({
 
       setProofError(null);
       setDepositModalStatus("success");
+      setDepositModalProgress("Deposit confirmed. Your position is updating.");
       await refetchUserPosition();
-      setTimeout(() => setDepositModalStatus(null), 2000);
+      setTimeout(() => {
+        setDepositModalStatus(null);
+        setDepositModalProgress(null);
+      }, 2000);
     } catch (error) {
       setProofError(error instanceof Error ? error.message : "Failed to generate deposit proof");
       setDepositModalStatus(null);
+      setDepositModalProgress(null);
     } finally {
       setActiveProof(null);
     }
@@ -328,8 +286,8 @@ export function useDashboardProofs({
     setProofError(null);
     onBeforeWithdrawStart();
     setActiveProof("withdraw");
-    setWithdrawModalStatus("pending");
-    setWithdrawModalProgress("Preparing withdraw...");
+    setWithdrawModalStatus("proof");
+    setWithdrawModalProgress("Generating zero-knowledge proof...");
     try {
       const requiredUnitsRaw = await getPurchasableUnits(amountUnits);
       const requiredUnits = Number(requiredUnitsRaw);
@@ -372,7 +330,8 @@ export function useDashboardProofs({
           continue;
         }
         currentStep += 1;
-        setWithdrawModalProgress(`Processing note ${currentStep}/${Math.max(1, totalSteps)}...`);
+        setWithdrawModalStatus("proof");
+        setWithdrawModalProgress(`Generating proof ${currentStep}/${Math.max(1, totalSteps)}...`);
 
         const merklePath = await getMerklePath(item.note.commitment, item.note.leaf_index);
         const result = await generateWithdrawProof(
@@ -394,8 +353,10 @@ export function useDashboardProofs({
 
         const { transaction, withdraw_fee } = await withdraw(result.proofHex, result.publicInputs, 0);
         const withdrawCalls = getCallsFromTransactions([transaction]);
+        setWithdrawModalStatus("approve");
+        setWithdrawModalProgress(`Proof ${currentStep}/${Math.max(1, totalSteps)} ready. Approve transaction in your wallet.`);
         const { transaction_hash } = await sendInvokeWithBackendFee(connection, withdrawCalls, withdraw_fee);
-        setWithdrawModalProgress(`Waiting confirmation for note ${currentStep}/${Math.max(1, totalSteps)}...`);
+        setWithdrawModalProgress(`Transaction ${currentStep}/${Math.max(1, totalSteps)} submitted. Waiting finalization...`);
         const callbackResult = await withdrawCallback(transaction_hash);
         console.log("callbackResult", JSON.stringify(callbackResult, null, 2));
 
@@ -464,5 +425,6 @@ export function useDashboardProofs({
     handleConfirmDepositAmount,
     handleConfirmWithdrawAmount,
     depositModalStatus,
+    depositModalProgress,
   };
 }

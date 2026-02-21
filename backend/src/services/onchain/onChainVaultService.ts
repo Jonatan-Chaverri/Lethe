@@ -50,7 +50,10 @@ export async function getWithdrawEvents(transactionHash: string): Promise<Withdr
 
 export async function pollMerkleTreeEvents(): Promise<MerkleTreeEvents> {
     const merkleTreeAddress = contractFactory.getMerkleTreeAddress();
-    const defaultBlockNumber = await chainEventsClient.getLatestBlockNumber();
+    let defaultBlockNumber = await chainEventsClient.getLatestBlockNumber();
+    if (process.env.STARTING_BLOCK_NUMBER) {
+        defaultBlockNumber = BigInt(process.env.STARTING_BLOCK_NUMBER);
+    }
     const latestBlockNumber = await merkleLeavesDbService.getLatestBlockNumber(defaultBlockNumber);
     const events = await chainEventsClient.getContractEvents(merkleTreeAddress, Number(latestBlockNumber));
     const parsedEvents = events.getMerkleTreeEvents();

@@ -115,6 +115,16 @@ const deployGaragaVerifier = async (verifierType: "deposit" | "withdraw"): Promi
 	return verifierAddress;
 };
 
+const deployMockVesuVToken = async (assetAddress: string): Promise<string> => {
+	const { address: vTokenAddress } = await deployContract({
+		contract: "MockVToken",
+		constructorArgs: {
+			asset: assetAddress,
+		},
+	});
+	return vTokenAddress;
+};
+
 
 /** ------------------------------
  *   FULL DEPLOY MODE
@@ -142,6 +152,7 @@ const deployScript = async (): Promise<void> => {
 	});
 
 	let wbtcAddress = "0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac";
+	let vTokenAddress = process.env.VESU_V_TOKEN_ADDRESS;
 	if (argv.network === "sepolia") {
 		if (process.env.MOCK_WBTC_ADDRESS) {
 			wbtcAddress = process.env.MOCK_WBTC_ADDRESS;
@@ -154,10 +165,34 @@ const deployScript = async (): Promise<void> => {
 			wbtcAddress = address;
 			console.log(green("✔ MockWBTC deployed at "), wbtcAddress);
 		}
+
+		if (process.env.MOCK_V_TOKEN_ADDRESS) {
+			vTokenAddress = process.env.MOCK_V_TOKEN_ADDRESS;
+			console.log(green("✔ MockVToken address found in environment variables: "), vTokenAddress);
+		} else {
+			const { address: mockVTokenAddress } = await deployContract({
+				contract: "MockVToken",
+				constructorArgs: {
+					asset: wbtcAddress,
+				},
+			});
+			vTokenAddress = mockVTokenAddress;
+			console.log(green("✔ MockVToken deployed at "), vTokenAddress);
+		}
 	}
 
 	const depositVerifierAddress = await deployGaragaVerifier("deposit");
 	const withdrawVerifierAddress = await deployGaragaVerifier("withdraw");
+
+	const { address: vessuStrategyAddress } = await deployContract({
+		contract: "VesuStrategy",
+		constructorArgs: {
+			admin: admin,
+			pool: process.env.VESU_POOL_ADDRESS,
+			v_token: vTokenAddress,
+			asset: wbtcAddress,
+		},
+	});
 
 	const { address: vaultAddress } = await deployContract({
 		contract: "Vault",
@@ -167,6 +202,7 @@ const deployScript = async (): Promise<void> => {
 			merkle_tree: merkleTreeAddress,
 			deposit_verifier: depositVerifierAddress,
 			withdraw_verifier: withdrawVerifierAddress,
+			vesu_strategy: vessuStrategyAddress,
 			wbtc: wbtcAddress,
 		},
 	});
@@ -175,6 +211,8 @@ const deployScript = async (): Promise<void> => {
 	console.log(green("✔ Withdraw Verifier deployed at "), withdrawVerifierAddress);
 	console.log(green("✔ Merkle Tree deployed at "), merkleTreeAddress);
 	console.log(green("✔ Nullifier Registry deployed at "), nullifierRegistryAddress);
+	console.log(green("✔ Vesu Strategy deployed at "), vessuStrategyAddress);
+	console.log(green("✔ Vesu V Token deployed at "), vTokenAddress);
 	console.log(green("✔ Vault deployed at "), vaultAddress);
 
 	await executeDeployCalls();
@@ -188,6 +226,11 @@ const deployScript = async (): Promise<void> => {
 		},
 		{
 			contractAddress: nullifierRegistryAddress,
+			entrypoint: "set_vault_address",
+			calldata: { vault: vaultAddress },
+		},
+		{
+			contractAddress: vessuStrategyAddress,
 			entrypoint: "set_vault_address",
 			calldata: { vault: vaultAddress },
 		},

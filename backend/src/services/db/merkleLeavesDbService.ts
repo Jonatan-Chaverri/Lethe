@@ -50,7 +50,7 @@ export const merkleLeavesDbService = {
         select: { block_number: true },
       });
       if (!latest) {
-        return BigInt(0);
+        return defaultBlockNumber;
       }
       return latest.block_number;
     } catch (error) {

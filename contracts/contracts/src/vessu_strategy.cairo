@@ -2,6 +2,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IVesuStrategy<ContractState> {
+    fn set_vault_address(ref self: ContractState, vault: ContractAddress);
     fn get_total_locked_assets(self: @ContractState) -> u256;
     fn deposit_assets(ref self: ContractState, amount_assets: u256);
     fn withdraw_assets(ref self: ContractState, amount_assets: u256);
@@ -68,7 +69,6 @@ mod VesuStrategy {
         #[substorage(v0)]
         accesscontrol: AccessControlComponent::Storage,
         vault: ContractAddress,
-        pool_factory: ContractAddress,
         pool: ContractAddress,
         asset: ContractAddress,
         v_token: ContractAddress,
@@ -99,24 +99,13 @@ mod VesuStrategy {
     fn constructor(
         ref self: ContractState,
         admin: ContractAddress,
-        vault: ContractAddress,
-        pool_factory: ContractAddress,
         pool: ContractAddress,
+        v_token: ContractAddress,
         asset: ContractAddress,
     ) {
         self.accesscontrol.initializer();
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
-        assert(vault != Zero::zero(), 'invalid-vault');
-        assert(pool_factory != Zero::zero(), 'invalid-pool-factory');
-        assert(pool != Zero::zero(), 'invalid-pool');
-        assert(asset != Zero::zero(), 'invalid-asset');
 
-        let v_token = IVesuPoolFactoryDispatcher { contract_address: pool_factory }
-            .v_token_for_asset(pool, asset);
-        assert(v_token != Zero::zero(), 'invalid-v-token');
-
-        self.vault.write(vault);
-        self.pool_factory.write(pool_factory);
         self.pool.write(pool);
         self.asset.write(asset);
         self.v_token.write(v_token);
@@ -127,6 +116,12 @@ mod VesuStrategy {
 
     #[abi(embed_v0)]
     impl VesuStrategyImpl of super::IVesuStrategy<ContractState> {
+
+        fn set_vault_address(ref self: ContractState, vault: ContractAddress) {
+            self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
+            self.vault.write(vault);
+        }
+
         fn get_total_locked_assets(self: @ContractState) -> u256 {
             let v_token = self.v_token.read();
             let shares = IERC20Dispatcher { contract_address: v_token }.balance_of(get_contract_address());
@@ -161,9 +156,6 @@ mod VesuStrategy {
 
         fn rescue_tokens(ref self: ContractState, token: ContractAddress, to: ContractAddress, amount: u256) {
             self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
-            assert(token != Zero::zero(), 'invalid-token');
-            assert(to != Zero::zero(), 'invalid-recipient');
-            assert(amount > 0, 'zero-amount');
             if token == self.asset.read() {
                 assert(to == self.vault.read(), 'asset-only-vault');
             }
@@ -172,6 +164,7 @@ mod VesuStrategy {
         }
 
         fn is_configured(self: @ContractState) -> bool {
+            // mock for now
             true
         }
 

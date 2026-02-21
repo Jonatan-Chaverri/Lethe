@@ -5,6 +5,7 @@ mod vessu_strategy;
 mod vault;
 
 mod mocks {
+    pub mod mock_v_token;
     pub mod mock_wbtc;
 }
 

@@ -86,6 +86,7 @@ export default function DashboardPage() {
     handleOpenWithdrawAmount,
     handleCloseWithdrawAmount,
     depositModalStatus,
+    depositModalProgress,
     withdrawModalStatus,
     withdrawModalProgress,
     notes,
@@ -518,12 +519,17 @@ export default function DashboardPage() {
                 aria-live="polite"
               >
                 <div className="w-full max-w-sm rounded-2xl border border-[#3b2a11] bg-[#101010] p-8 shadow-panel text-center">
-                  {depositModalStatus === "pending" ? (
+                  {depositModalStatus !== "success" ? (
                     <>
                       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-lethe-amber border-t-transparent animate-spin" />
-                      <h3 className="font-display text-xl text-white">Processing deposit</h3>
+                      <h3 className="font-display text-xl text-white">
+                        {depositModalStatus === "proof" ? "Generating proof" : "Approve transaction"}
+                      </h3>
                       <p className="mt-2 text-sm text-[#c9c9c9]">
-                        Confirm in your wallet and wait for the transaction to be mined.
+                        {depositModalProgress ??
+                          (depositModalStatus === "proof"
+                            ? "Running circuit and preparing your zero-knowledge proof."
+                            : "Confirm in your wallet and wait for transaction finalization.")}
                       </p>
                     </>
                   ) : (
@@ -534,7 +540,9 @@ export default function DashboardPage() {
                         </svg>
                       </div>
                       <h3 className="font-display text-xl text-white">Deposit successful</h3>
-                      <p className="mt-2 text-sm text-[#c9c9c9]">Your position balance will update shortly.</p>
+                      <p className="mt-2 text-sm text-[#c9c9c9]">
+                        {depositModalProgress ?? "Your position balance will update shortly."}
+                      </p>
                     </>
                   )}
                 </div>
@@ -647,12 +655,17 @@ export default function DashboardPage() {
                 aria-live="polite"
               >
                 <div className="w-full max-w-sm rounded-2xl border border-[#3b2a11] bg-[#101010] p-8 shadow-panel text-center">
-                  {withdrawModalStatus === "pending" ? (
+                  {withdrawModalStatus !== "success" ? (
                     <>
                       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-2 border-lethe-line border-t-transparent animate-spin" />
-                      <h3 className="font-display text-xl text-white">Processing withdraw</h3>
+                      <h3 className="font-display text-xl text-white">
+                        {withdrawModalStatus === "proof" ? "Generating proof" : "Approve transaction"}
+                      </h3>
                       <p className="mt-2 text-sm text-[#c9c9c9]">
-                        {withdrawModalProgress ?? "Confirm in your wallet and wait for transaction finalization."}
+                        {withdrawModalProgress ??
+                          (withdrawModalStatus === "proof"
+                            ? "Running circuit and preparing your zero-knowledge proof."
+                            : "Confirm in your wallet and wait for transaction finalization.")}
                       </p>
                     </>
                   ) : (
