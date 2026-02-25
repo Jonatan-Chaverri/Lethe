@@ -1,322 +1,134 @@
 # Lethe - Private BTC Yield Vault
 
-## Overview
+Lethe is a Starknet project for private BTC-position management with ZK notes.
 
-This project implements a **privacy-preserving yield vault for BTC exposure** using **wBTC on Starknet** and **zero-knowledge proofs**.
+## Live demo
 
-Users can:
+- Demo app: [https://lethe-sable.vercel.app](https://lethe-sable.vercel.app)
+- Current network: **Starknet Sepolia**
+- Current asset setup: **mock token flow** using `MockWBTC` (test/demo only)
 
-* deposit wBTC into a shared yield vault
-* earn yield over time via a standard share-based accounting model
-* withdraw principal + yield **without revealing which deposit funded the withdrawal**
-* keep balances, position evolution, and profit attribution private
+## What is implemented now
 
-The protocol achieves privacy by **decoupling ownership from addresses**, using **Merkle-tree commitments** and **zero-knowledge membership proofs**, while keeping global solvency and yield math fully public and auditable.
+### On-chain contracts
 
-This is **not** a Bitcoin consensus or bridging protocol.
-It operates *on top of* wBTC and Starknet.
+- `Vault`:
+  - public accounting (`total_shares`, share price math)
+  - deposit/withdraw entrypoints gated by proof verification
+  - transfers ERC20 assets
+- `MerkleTree`:
+  - commitment insertion
+  - root validity history checks
+- `NullifierRegistry`:
+  - nullifier spent tracking (double-spend prevention)
+- `VesuStrategy`:
+  - strategy adapter layer for capital deployment
+  - vault-only `deposit_assets` / `withdraw_assets`
+  - reads strategy position using `convert_to_assets` from vToken shares
+  - admin rescue function with guardrails
+- Mocks:
+  - `MockWBTC`
+  - `MockVToken` (minimal vToken behavior for local/sepolia demo setups)
 
----
+### Proof system
 
-## High-level design
+- Noir circuits are used to produce and verify deposit/withdraw proofs.
+- On-chain proof verification uses **Garaga-generated verifier contracts** (`contracts/garaga-verifiers`).
+- Withdrawals rely on note membership + nullifier constraints.
+- Notes are commitment-based and stored in an append-only Merkle tree.
 
-The protocol separates concerns into three layers:
+## Shares and share units
 
-1. **Public vault accounting (on-chain, transparent)**
-2. **Private ownership tracking (Merkle tree)**
-3. **Zero-knowledge authorization (Noir circuits)**
+Lethe tracks ownership in **k-units** (share units), not per-address balances.
 
-### Core idea
+- `total_shares` in the vault is tracked as k-units.
+- `UNIT_ATOMS = 1000` means one full share is split into 1000 units. Minimum deposit/withdraw is the value in wBTC
+  equivalent to 0.001 share.
+- Price helpers:
+  - `get_share_price()` returns full-share price
+  - `get_k_units_price(k)` returns price for `k` units
 
-Users do not have on-chain balances.
+Operationally:
 
-Instead, they own **private notes** that represent a fixed number of **vault shares**, recorded as commitments in a Merkle tree.
-Yield accrues by increasing a **global exchange rate**, not by updating user balances.
+- Deposits mint k-units (from proof public inputs) and increase `total_shares`.
+- Withdrawals burn spent units from `total_shares`.
+- Users hold private notes that encode their unit ownership off-address.
 
-Ownership is proven **only at withdrawal time**, via a ZK proof.
+## How privacy is achieved
 
----
+Privacy is implemented with commitments + ZK proofs:
 
-## Public vault model (ERC-4626–style)
+- A deposit creates a commitment inserted into the Merkle tree.
+- Withdraw uses a proof that validates:
+  - note membership in a valid Merkle root
+  - correct nullifier relation
+  - withdrawal-unit constraints
+- Nullifier registry enforces one-time spend.
 
-The vault follows a standard share-based model:
+Result:
 
-### Public state
+- ownership and spend path are private
+- no public per-user vault balance mapping
+- public solvency/accounting remains auditable
 
-* `total_assets` — total wBTC held by the vault
-* `total_shares` — total shares outstanding
-* `assets_per_share = total_assets / total_shares`
+## Merkle tree reconstruction and path service
 
-Yield increases `total_assets`, which increases `assets_per_share`.
-No per-user state is updated when yield accrues.
+Withdraw proof generation needs a valid Merkle path for a note commitment.  
+Instead of requiring each client to index chain history, Lethe backend provides this as a service.
 
----
+- Backend continuously polls relevant on-chain events (commitment insertions / tree updates).
+- It reconstructs and keeps an updated Merkle tree state off-chain.
+- For proof generation, clients call backend to fetch:
+  - `path_elements`
+  - `path_indices`
+  - current/valid root
 
-## Fixed-unit private notes
+This gives all clients a consistent path source for withdraw proofs while the on-chain contracts still enforce correctness by verifying the submitted root and proof.
 
-### Share units
+## How yield is achieved
 
-To simplify zero-knowledge accounting and avoid fractional arithmetic, the protocol uses **fixed share units**.
+Yield comes from deploying part of vault assets into strategy:
 
-* Shares are represented internally as integers (`share atoms`)
-* A constant unit size is chosen, e.g.:
+- Vault can hold assets directly and/or deploy assets to `VesuStrategy`.
+- Current implementation deposits **10% of each deposit** into strategy.
+- `VesuStrategy` interacts with vToken and reports deployed value via:
+  - vToken share balance
+  - `convert_to_assets(shares)`
+- Vault total assets are:
+  - `available assets in vault` + `assets locked in strategy`
 
-```text
-SHARE_ATOMS = 10^18        // internal precision
-UNIT_ATOMS  = 10^13        // = 0.00001 share
-```
+As deployed assets grow, share-unit price increases over time, which is how yield is reflected for note holders.
 
-All private ownership is expressed as multiples of `UNIT_ATOMS`.
+### Webapp flow
 
-### Note semantics
+- Deposit/withdraw UX now shows clear modal stages:
+  1. generating proof
+  2. approve transaction in wallet
+  3. success
 
-A **note** represents ownership of `k` fixed share units.
+## Architecture summary
 
-Notes are private and unlinkable.
+- **Vault handles accounting and user-facing economic state.**
+- **Strategy handles capital deployment logic only.**
+- **Private ownership is represented via notes + commitments, not address balances.**
+- **Nullifiers guarantee one-time note spend.**
 
----
+## Important notes
 
-## Commitments and Merkle tree
+- This is an **experimental prototype**.
+- The Sepolia deployment currently uses **mock assets** (including `MockWBTC`) for testing/demo.
+- This repository is not a Bitcoin bridge or Bitcoin consensus implementation.
 
-### Commitment format
+## Repository layout
 
-Each note is represented by a cryptographic commitment:
-
-```text
-commitment = Poseidon(
-  0,              // domain separator (leaf)
-  secret,
-  nullifier,
-  k               // number of fixed share units
-)
-```
-
-* `secret` — private randomness known only to the user
-* `nullifier` — unique value used to prevent double-spends
-* `k` — number of fixed share units owned
-
-### Merkle tree
-
-* All commitments are stored in an **append-only Merkle tree**
-* The contract maintains:
-
-  * the current Merkle root
-  * a history of valid roots
-* The tree uses:
-
-  * **Poseidon hash**
-  * **non-commutative left/right hashing**
-  * explicit domain separation for leaves and internal nodes
-
-The Merkle tree commits to **private ownership state**, not balances.
-
----
-
-## Nullifiers and double-spend prevention
-
-Each note can be spent **exactly once**.
-
-At withdrawal time:
-
-* the user reveals `nullifier_hash = Poseidon(nullifier)`
-* the contract checks that this nullifier has not been used
-* the nullifier is then permanently marked as spent
-
-This guarantees:
-
-* no double withdrawals
-* no balance inflation
-* correct total accounting
-
----
-
-## Deposit flow
-
-1. User deposits `D` wBTC into the vault
-2. Vault computes:
-
-   ```text
-   minted_shares = D / assets_per_share
-   k = floor(minted_shares / UNIT_ATOMS)
-   ```
-3. Dust (if any) is handled by policy (refund or donation)
-4. User generates:
-
-   * `secret`
-   * `nullifier`
-   * `commitment`
-5. Commitment is appended to the Merkle tree
-6. `total_assets` and `total_shares` are updated
-
-**No ZK proof is required for deposits.**
-
----
-
-## Withdrawal flow
-
-Withdrawals require a **zero-knowledge proof**.
-
-### User proves:
-
-* knowledge of `(secret, nullifier, k)`
-* the commitment exists in the Merkle tree
-* the commitment corresponds to the current (or past valid) root
-* `w ≤ k` where `w` is the number of units withdrawn
-
-### Contract logic:
-
-1. Verify the ZK proof
-2. Check nullifier is unused
-3. Mark nullifier as spent
-4. Compute payout:
-
-   ```text
-   shares_withdrawn = w * UNIT_ATOMS
-   payout = shares_withdrawn * assets_per_share
-   ```
-5. Transfer `payout` wBTC to the recipient
-6. If `w < k`, mint a **new commitment** for `k - w` units
-
-Withdrawals can be:
-
-* partial
-* delayed
-* routed through relayers
-* sent to fresh addresses
-
-This breaks deposit ↔ withdrawal linkage.
-
----
-
-## Zero-knowledge circuits (Noir)
-
-The protocol uses **Noir** to define authorization logic.
-
-### Core circuit: `Withdraw`
-
-The circuit enforces:
-
-1. Commitment correctness
-
-   ```text
-   commitment = Poseidon(0, secret, nullifier, k)
-   ```
-2. Merkle membership
-
-   * commitment exists in the tree
-   * correct path and direction bits
-3. Nullifier binding
-
-   ```text
-   nullifier_hash = Poseidon(nullifier)
-   ```
-4. Unit constraint
-
-   ```text
-   w ≤ k
-   ```
-
-### What the circuit does NOT do
-
-* It does **not** compute yield
-* It does **not** track balances
-* It does **not** update global state
-
-All economic logic remains public and auditable.
-
----
-
-## Contracts
-
-### Vault contract
-
-Responsibilities:
-
-* hold wBTC
-* track `total_assets`, `total_shares`
-* compute `assets_per_share`
-* process deposits and withdrawals
-
-### Merkle tree contract / module
-
-Responsibilities:
-
-* append commitments
-* store current and historical roots
-* expose roots for proof verification
-
-### Nullifier registry
-
-Responsibilities:
-
-* track spent nullifiers
-* prevent double-spends
-
----
-
-## Privacy guarantees
-
-The protocol provides:
-
-* **Unlinkability**
-  Deposits cannot be linked to withdrawals
-
-* **Balance privacy**
-  No on-chain per-user balances exist
-
-* **Profit privacy**
-  Observers cannot prove how much a given user earned
-
-What is still public:
-
-* total vault assets
-* total yield
-* individual transfer amounts (ERC-20 limitation)
-
----
-
-## Non-goals
-
-This project does **not**:
-
-* verify Bitcoin consensus
-* replace wBTC custody assumptions
-* hide transaction amounts at the token level
-* provide anonymity against timing analysis without user discipline
-
----
-
-## Future extensions
-
-* Relayer network for gas abstraction
-* Batched withdrawals
-* Note splitting / merging circuits
-* Shielded token integration (if available)
-* BTC-native version using provable Bitcoin clients
-
----
-
-## Status
-
-This project is **experimental** and under active design.
-
-The architecture prioritizes:
-
-* correctness
-* auditability
-* minimal ZK complexity
-* long-term maintainability
-
----
-
-## Summary
-
-This protocol applies **UTXO-style privacy** and **share-based yield accounting** to BTC exposure on Starknet.
-
-It combines:
-
-* simple public economics
-* private ownership via commitments
-* ZK proofs for authorization
+- `/contracts` - Cairo smart contracts and tests
+- `/circuits` - Noir circuits for ZK proofs
+- `/backend` - backend services for proof/transaction orchestration
+- `/webapp` - frontend application
 
 The result is a **private, non-custodial yield vault** that preserves transparency where it matters and privacy where it counts.
+
+## Author
+
+- [Jonatan Chaverri](https://github.com/Jonatan-Chaverri)
+- jonathan.chaverri12@gmail.com

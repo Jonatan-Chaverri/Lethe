@@ -4,10 +4,53 @@ TypeScript backend with Express, Prisma, Starknet signature auth, and Zod valida
 
 ## Endpoints
 
+### Health
+
 - `GET /api/health`
+
+### Auth
+
 - `POST /api/auth/register_wallet`
 - `GET /api/auth/me` (requires auth middleware)
 - `POST /api/auth/refresh`
+
+### On-chain helper APIs
+
+- `GET /api/onchain/getWBTCBalance` (auth required)
+  - Reads connected user wallet `MockWBTC` balance.
+- `GET /api/onchain/mintTestnetWBTC` (auth required)
+  - Mints test `MockWBTC` to the authenticated wallet (guarded by backend cap check).
+
+### User positions / vault APIs
+
+- `GET /api/user-positions/getShareUnitPrice` (auth required)
+  - Returns current price of `1` share unit.
+- `POST /api/user-positions/getPurchasableUnits` (auth required)
+  - Body: `{ "amount_btc": number }`
+  - Returns purchasable share units for amount.
+- `POST /api/user-positions/deposit` (auth required)
+  - Body: `{ "proof": string, "publicInputs": string[], "amount_btc": number }`
+  - Returns transactions payload for allowance + deposit invoke.
+- `POST /api/user-positions/deposit/callback` (auth required)
+  - Body: `{ "transaction_hash": string, "deposit_units": number }`
+  - Parses chain events and returns inserted commitment/leaf index.
+- `POST /api/user-positions/merkle/path` (no auth)
+  - Body: `{ "commitment": string, "leaf_index": number }`
+  - Returns Merkle path elements/indices and root for proof generation.
+- `POST /api/user-positions/withdraw` (auth required)
+  - Body: `{ "proof": string, "publicInputs": string[], "amount_btc": number }`
+  - Returns withdraw transaction payload + estimated fee.
+- `POST /api/user-positions/withdraw/callback` (auth required)
+  - Body: `{ "transaction_hash": string }`
+  - Parses withdrawal events and returns optional change note commitment.
+- `POST /api/user-positions/events` (no auth)
+  - Body: `{ "from_block": number }`
+  - Polls/returns Merkle tree event data.
+
+### Share price chart API
+
+- `GET /api/sharePrice?interval=<1m|1h|1d>&range=<1h|1d|7d>`
+  - Returns chart points used by dashboard share-price graph.
 
 ## Project Structure
 
@@ -136,6 +179,13 @@ Behavior:
 - Verifies refresh token exists in `refresh_tokens` and belongs to an active session
 - Rotates refresh token in DB (old token removed, new token stored)
 - Issues a new session (`access_token` + `refresh_token`)
+
+## Additional request/response notes
+
+- Most protected endpoints require:
+  - `Authorization: Bearer <access_token>`
+- API responses are wrapped through `successResponse(...)`.
+- Errors are normalized through the global error middleware (`HttpError` + `errorHandler`).
 
 ## Required Database Table
 
